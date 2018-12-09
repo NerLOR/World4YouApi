@@ -49,7 +49,6 @@ elif args.password_file:
     file.close()
 else:
     password = getpass.getpass('Password: ', stream=sys.stderr)
-    error('')
 
 
 api = World4YouApi()
