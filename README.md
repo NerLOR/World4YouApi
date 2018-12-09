@@ -12,7 +12,7 @@ from command line.
 * ```-q```, ```--quiet``` Quiet Mode, do not output logging messages
 * ```-u```, ```--username``` Username for World4You
 * ```-p pwd```, ```--password pwd``` Password as plain text
-* ```-P```, ```--password-file``` The first line of the given file is used as password
+* ```-P file```, ```--password-file file``` The first line of the given file is used as password
 * ```action``` The action to be performed. Possible values: 
     * ```add <fqdn> <dns-type> <value>```
     * ```update <fqdn> <value>```
