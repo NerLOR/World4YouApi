@@ -48,8 +48,8 @@ elif args.password_file:
     password = file.readline()
     file.close()
 else:
-    password = getpass.getpass('Password: ')
-    print('')
+    password = getpass.getpass('Password: ', stream=sys.stderr)
+    error('')
 
 
 api = World4YouApi()
@@ -119,7 +119,8 @@ def csv(*args):
 
 def interactive():
     while True:
-        line = input('> ')
+        print('> ', file=sys.stderr, end='')
+        line = input()
         args = line.split(' ')
         cmd = args.pop(0)
         try:
