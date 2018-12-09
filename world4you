@@ -54,15 +54,19 @@ else:
 
 api = World4YouApi()
 
-info('Logging in...', end='')
-api.login(username, password)
-info('\rSuccessfully logged in')
+try:
+    info('Logging in...', end='')
+    api.login(username, password)
+    info('\rSuccessfully logged in')
 
-info('Retrieving DNS entries...', end='')
-api.get_resource_records()
-info('\rSuccessfully retrieved DNS entries')
+    info('Retrieving DNS entries...', end='')
+    api.get_resource_records()
+    info('\rSuccessfully retrieved DNS entries')
 
-info('')
+    info('')
+except ConnectionError as e:
+    error("\r" + str(e))
+    exit(5)
 
 
 def add(resource_name: str=None, dns_type: str=None, value: str=None, *args):
@@ -191,7 +195,7 @@ try:
         if not csv(*args.arg):
             exit(1)
     else:
-        print("unknown error")
+        print("invalid action")
         exit(4)
 except ConnectionError as e:
     error(str(e))
