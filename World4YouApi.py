@@ -1,13 +1,11 @@
 #!/usr/bin/python3
 
-
 import requests
 import re
 import urllib.parse
 
 
 class World4YouApi:
-
     def __init__(self, domain: str='my.world4you.com', session_cookie: str='__Host-W4Y_SESSID'):
         self._session = None
         self._session_cookie_name = session_cookie
@@ -45,10 +43,16 @@ class World4YouApi:
                               cookies=cookies,
                               headers={'Content-Type': content_type})
         if r.status_code != 200:
-            print(r.reason)
-            raise ConnectionError('invalid status code: ' +
-                                  str(r.status_code) + ' ' + str(r.reason) +
-                                  ' (' + str(r.url) + ')')
+            if r.status_code == 270:
+                m = re.search(r'<div.*?id=message.*?>\s*(.*?)\s*</div>', r.text)
+                msg = re.sub(r'<.*?>', '', m.group(1))
+                msg = re.sub(r'\s+', ' ', msg)
+                if msg[0] == ' ':
+                    msg = msg[1:]
+                raise ConnectionError('error: ' + msg)
+            else:
+                raise ConnectionError('invalid status code: ' +
+                                      str(r.status_code) + ' ' + str(r.reason) + ' (' + str(r.url) + ')')
         self._update_session(r)
         return r
 
@@ -107,14 +111,14 @@ class World4YouApi:
                 return self.resource_records.index(rr)
         return None
 
-    def update_resource_record(self, resource_name: str, new_value: str):
+    def update(self, resource_name: str, new_value: str):
         try:
-            self.alter_resource_record(resource_name, self.find_resource_record(resource_name)['type'], new_value)
-        except ConnectionError:
-            raise ConnectionError('unable to update resource record')
+            self.alter(resource_name, self.find_resource_record(resource_name)['type'], new_value)
+        except ConnectionError as e:
+            raise ConnectionError('unable to update resource record: ' + str(e))
         return True
 
-    def alter_resource_record(self, resource_name: str, resource_type: str, new_value: str=None):
+    def alter(self, resource_name: str, resource_type: str, new_value: str=None):
         if not self.logged_in:
             raise PermissionError('not logged in')
         resource_record = self.find_resource_record(resource_name)
@@ -137,13 +141,13 @@ class World4YouApi:
         })
         try:
             self._request('/dns/', post, 'application/x-www-form-urlencoded')
-        except ConnectionError:
-            raise ConnectionError('unable to alter resource table')
+        except ConnectionError as e:
+            raise ConnectionError('unable to alter resource table: ' + str(e))
         self._resource_records[rr_index]['type'] = resource_type
         self._resource_records[rr_index]['value'] = new_value
         return True
 
-    def delete_resource_record(self, resource_name: str):
+    def delete(self, resource_name: str):
         if not self.logged_in:
             raise PermissionError('not logged in')
         resource_record = self.find_resource_record(resource_name)
@@ -159,12 +163,12 @@ class World4YouApi:
         })
         try:
             self._request('/dns/', post, 'application/x-www-form-urlencoded')
-        except ConnectionError:
-            raise ConnectionError('unable to delete resource record')
+        except ConnectionError as e:
+            raise ConnectionError('unable to delete resource record: ' + str(e))
         self._resource_records.remove(self._resource_records[rr_index])
         return True
 
-    def add_resource_record(self, resource_name: str, resource_type: str, value: str):
+    def add(self, resource_name: str, resource_type: str, value: str):
         if not self.logged_in:
             raise PermissionError('not logged in')
         unique_form_id, package_id = self._get_unique_ids()
@@ -178,8 +182,8 @@ class World4YouApi:
         })
         try:
             self._request('/dns/', post, 'application/x-www-form-urlencoded')
-        except ConnectionError:
-            raise ConnectionError('unable to add resource record')
+        except ConnectionError as e:
+            raise ConnectionError('unable to add resource record: ' + str(e))
         self.get_resource_records()
         return True
 

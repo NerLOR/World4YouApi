@@ -6,135 +6,199 @@ import sys
 import argparse
 
 
-parser = argparse.ArgumentParser(description='An API for World4You DNS Services')
+parser = argparse.ArgumentParser(prog='world4you', description='An API for World4You DNS Services')
 parser.add_argument('-i', '--interactive', action='store_true',
                     help='Activate interactive mode')
+parser.add_argument('-q', '--quiet', action='store_true',
+                    help='Do not output log messages')
 parser.add_argument('-u', '--username', metavar='username', type=str, required=True,
                     help='Specify the username to be used')
 parser.add_argument('-p', '--password', metavar='pwd', type=str,
                     help='Specify the password to be used')
 parser.add_argument('-P', '--password-file', metavar='file', type=str,
                     help='Specify the password file to be read the password from')
-parser.add_argument('action', metavar='action', type=str, choices=['add', 'update', 'alter', 'delete'],
+parser.add_argument('action', metavar='action', type=str, nargs='?',
+                    choices=['add', 'update', 'alter', 'delete', 'table', 'csv'],
                     help='The action to be performed')
-parser.add_argument('arg', metavar='arg', nargs='*',
+parser.add_argument('arg', metavar='arg', nargs='*', type=str,
                     help='Args for the specified action')
 args = parser.parse_args()
+
+v = 1
+if args.quiet:
+    v = 0
+
+
+def info(*args, **kwargs):
+    if v > 0:
+        print(*args, **kwargs, file=sys.stderr)
+        sys.stderr.flush()
+
+
+def error(*args, **kwargs):
+    print(*args, **kwargs, file=sys.stderr)
+    sys.stderr.flush()
+
+
+username = args.username
+if args.password:
+    password = args.password
+elif args.password_file:
+    file = open(args.password_file)
+    password = file.readline()
+    file.close()
+else:
+    password = getpass.getpass('Password: ')
+    print('')
 
 
 api = World4YouApi()
 
-username = args.username
-password = getpass.getpass('Password: ')
-print('')
-
-print('Logging in...', end='')
-sys.stdout.flush()
+info('Logging in...', end='')
 api.login(username, password)
-print('\rSuccessfully logged in')
+info('\rSuccessfully logged in')
 
-print('Retrieving DNS entries...', end='')
-sys.stdout.flush()
+info('Retrieving DNS entries...', end='')
 api.get_resource_records()
-print('\rSuccessfully retrieved DNS entries')
+info('\rSuccessfully retrieved DNS entries')
 
-print("\nEnter command:")
+info('')
 
-while True:
-    line = input('> ')
-    args = line.split(' ')
-    cmd = args[0]
-    if cmd == 'list':
-        if len(args) != 1:
-            print("usage: list")
-        else:
-            print("")
-            print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
-            print("| {name:^32s} | {type:^8s} | {value:^64s} |".format(name='Name', type='Type', value='Value'))
-            print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
-            for rr in api.resource_records:
-                print("| {name:>32s} | {type:^8s} | {value:>64s} |".
-                      format(name=rr['name'], type=rr['type'], value=rr['value']))
-            print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
-            print("")
-    elif cmd == 'reload':
-        if len(args) != 1:
-            print("usage: reload")
-        else:
-            print('Retrieving DNS entries...', end='')
-            sys.stdout.flush()
-            api.get_resource_records()
-            print('\rSuccessfully retrieved DNS entries')
-    elif cmd == 'delete':
-        if len(args) != 2:
-            print("usage: delete <fqdn>")
-        else:
-            print("Deleting " + args[1] + "...", end='')
-            sys.stdout.flush()
-            try:
-                api.delete_resource_record(args[1])
-                print("\rSuccessfully deleted " + args[1])
-            except IndexError:
-                print("\rUnable to delete " + args[1] + ": Resource Record not found")
-            except ConnectionError:
-                print("\rUnable to delete " + args[1])
-    elif cmd == 'add':
-        if len(args) != 4:
-            print("usage: add <fqdn> <dns-type> <value>")
-        else:
-            print("Adding " + args[1] + "...", end='')
-            sys.stdout.flush()
-            try:
-                api.add_resource_record(args[1], args[2], args[3])
-                print("\rSuccessfully added " + args[1])
-            except ConnectionError:
-                print("\rUnable to add " + args[1])
-    elif cmd == 'update':
-        if len(args) != 3:
-            print("usage: update <fqdn> <value>")
-        else:
-            print("Updating " + args[1] + "...", end='')
-            sys.stdout.flush()
-            try:
-                api.update_resource_record(args[1], args[2])
-                print("\rSuccessfully updated " + args[1])
-            except IndexError:
-                print("\rUnable to update " + args[1] + ": Resource Record not found")
-            except ConnectionError:
-                print("\rUnable to update " + args[1])
-    elif cmd == 'alter':
-        if len(args) != 4:
-            print("usage: alter <fqdn> <dns-type> <value>")
-        else:
-            print("Altering " + args[1] + "...", end='')
-            sys.stdout.flush()
-            try:
-                api.alter_resource_record(args[1], args[2], args[3])
-                print("\rSuccessfully altered " + args[1])
-            except IndexError:
-                print("\rUnable to alter " + args[1] + ": Resource Record not found")
-            except ConnectionError:
-                print("\rUnable to alter " + args[1])
-    elif cmd == 'exit' or cmd == 'quit':
-        if len(args) != 1:
-            print("usage: " + cmd)
-        else:
-            print("Goodbye!")
-            exit(0)
-    elif cmd == 'help':
-        if len(args) != 1:
-            print("usage: help")
-        else:
-            print("Commands: ")
-            print("  help")
-            print("  list")
-            print("  reload")
-            print("  exit / quit")
-            print("  add <fqdn> <dns-type> <value>")
-            print("  update <fqdn> <value>")
-            print("  alter <fqdn> <dns-type> <value>")
-            print("  delete <fqdn>")
+
+def add(resource_name: str=None, dns_type: str=None, value: str=None, *args):
+    if not resource_name or not dns_type or not value or len(args) != 0:
+        error('usage: world4you add <fqdn> <dns-type> <value>')
+        return False
+    api.add(resource_name, dns_type, value)
+
+
+def update(resource_name: str=None, value: str=None, *args):
+    if not resource_name or not value or len(args) != 0:
+        error('usage: word4you update <fqdn> <value>')
+        return False
+    api.update(resource_name, value)
+
+
+def alter(resource_name: str=None, dns_type: str=None, value: str=None, *args):
+    if not resource_name or not dns_type or not value or len(args) != 0:
+        error('usage: world4you alter <fqdn> <dns-type> <value>')
+        return False
+    api.alter(resource_name, dns_type, value)
+
+
+def delete(resource_name: str=None, *args):
+    if not resource_name or len(args) != 0:
+        error('usage: world4you delete <fqdn>')
+        return False
+    api.delete(resource_name)
+
+
+def table(*args):
+    if len(args) != 0:
+        error('usage: world4you table')
+        return False
+    print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
+    print("| {name:^32s} | {type:^8s} | {value:^64s} |".format(name='Name', type='Type', value='Value'))
+    print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
+    for rr in api.resource_records:
+        print("| {name:>32s} | {type:^8s} | {value:>64s} |".
+              format(name=rr['name'], type=rr['type'], value=rr['value']))
+    print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
+    return True
+
+
+def csv(*args):
+    if len(args) != 0:
+        error('usage: world4you csv')
+        return False
+    for rr in api.resource_records:
+        print("{name:s},{type:s},\"{value:s}\"".
+              format(name=rr['name'], type=rr['type'], value=rr['value'].replace('"', '""')))
+    return True
+
+
+def interactive():
+    while True:
+        line = input('> ')
+        args = line.split(' ')
+        cmd = args.pop(0)
+        try:
+            if cmd == 'add':
+                add(*args)
+            elif cmd == 'update':
+                update(*args)
+            elif cmd == 'alter':
+                alter(*args)
+            elif cmd == 'delete':
+                delete(*args)
+            elif cmd == 'table' or cmd == 'list':
+                table(*args)
+            elif cmd == 'csv':
+                csv(*args)
+            elif cmd == 'reload':
+                if len(args) != 0:
+                    error("usage: world4you reload")
+                else:
+                    info('Retrieving DNS entries...', end='')
+                    api.get_resource_records()
+                    info('\rSuccessfully retrieved DNS entries')
+            elif cmd == 'exit' or cmd == 'quit':
+                if len(args) != 0:
+                    error("usage: world4you " + cmd)
+                error("Goodbye!")
+                exit(0)
+            elif cmd == 'help':
+                if len(args) != 0:
+                    error("usage: help")
+                else:
+                    error("Commands: ")
+                    error("  help")
+                    error("  list / table")
+                    error("  reload")
+                    error("  exit / quit")
+                    error("  add <fqdn> <dns-type> <value>")
+                    error("  update <fqdn> <value>")
+                    error("  alter <fqdn> <dns-type> <value>")
+                    error("  delete <fqdn>")
+            else:
+                error("unknown action. Type 'help' for help")
+        except ConnectionError as e:
+            error(str(e))
+        except IndexError as e:
+            error("unable to find resource record")
+
+
+try:
+    if args.interactive:
+        interactive()
+    elif args.action == 'add':
+        if not add(*args.arg):
+            exit(1)
+    elif args.action == 'update':
+        if not update(*args.arg):
+            exit(1)
+    elif args.action == 'alter':
+        if not alter(*args.arg):
+            exit(1)
+    elif args.action == 'delete':
+        if not delete(*args.arg):
+            exit(1)
+    elif args.action == 'table':
+        if not table(*args.arg):
+            exit(1)
+    elif args.action == 'csv':
+        if not csv(*args.arg):
+            exit(1)
     else:
-        print('Invalid command! Try \'help\'')
-    print("")
+        print("unknown error")
+        exit(4)
+except ConnectionError as e:
+    error(str(e))
+    exit(2)
+except IndexError as e:
+    error(str(e))
+    exit(3)
+
+exit(0)
+
 
