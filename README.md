@@ -7,7 +7,7 @@ It can be used to automatically update your dynamic IP Address.
 This Python script can be executed to update manipulate the resource records 
 from command line.
 
-```world4you [-i] [-q] -u username [-p pwd] [-P file] [action [arg ...]]```
+```world4you [-i] [-q] -u username [-p pwd | -P file] [action [arg ...]]```
 * ```-i```, ```--interactive``` Interactive mode
 * ```-q```, ```--quiet``` Quiet Mode, do not output logging messages
 * ```-u```, ```--username``` Username for World4You
