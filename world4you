@@ -92,11 +92,11 @@ def alter(resource_name: str=None, dns_type: str=None, value: str=None, *args):
     return True
 
 
-def delete(resource_name: str=None, *args):
-    if not resource_name or len(args) != 0:
-        error('usage: world4you delete <fqdn>')
+def delete(resource_name: str=None, dns_type: str=None, value: str=None, *args):
+    if not resource_name or not dns_type or not value or len(args) != 0:
+        error('usage: world4you delete <fqdn> <dns-type> <value>')
         return False
-    api.delete(resource_name)
+    api.delete(resource_name, dns_type, value)
     return True
 
 
@@ -167,7 +167,7 @@ def interactive():
                     error("  add <fqdn> <dns-type> <value>")
                     error("  update <fqdn> <value>")
                     error("  alter <fqdn> <dns-type> <value>")
-                    error("  delete <fqdn>")
+                    error("  delete <fqdn> <dns-type> <value>")
             else:
                 error("unknown action. Type 'help' for help")
         except ConnectionError as e:

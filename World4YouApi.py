@@ -99,15 +99,19 @@ class World4YouApi:
         package_id = m.group(2)
         return unique_form_id, package_id
 
-    def find_resource_record(self, resource_name: str):
+    def find_resource_record(self, resource_name: str, dns_type: str=None, value: str=None):
         for rr in self.resource_records:
-            if rr['name'] == resource_name:
+            if rr['name'] == resource_name \
+                    and (value is None or rr['value'] == value) \
+                    and (dns_type is None or rr['type'] == dns_type):
                 return rr.copy()
         return None
 
-    def get_resource_record_index(self, resource_name: str):
+    def get_resource_record_index(self, resource_name: str, dns_type: str=None, value: str=None):
         for rr in self.resource_records:
-            if rr['name'] == resource_name:
+            if rr['name'] == resource_name \
+                    and (value is None or rr['value'] == value) \
+                    and (dns_type is None or rr['type'] == dns_type):
                 return self.resource_records.index(rr)
         return None
 
@@ -147,11 +151,11 @@ class World4YouApi:
         self._resource_records[rr_index]['value'] = new_value
         return True
 
-    def delete(self, resource_name: str):
+    def delete(self, resource_name: str, dns_type: str=None, value: str=None):
         if not self.logged_in:
             raise PermissionError('not logged in')
-        resource_record = self.find_resource_record(resource_name)
-        rr_index = self.get_resource_record_index(resource_name)
+        resource_record = self.find_resource_record(resource_name, dns_type, value)
+        rr_index = self.get_resource_record_index(resource_name, dns_type, value)
         if not resource_record:
             raise IndexError('resource record not found')
         unique_form_id, package_id = self._get_unique_ids()
