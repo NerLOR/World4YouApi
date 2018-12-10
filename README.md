@@ -18,7 +18,7 @@ If no password or file is proveded, the password is read from ```stdin```.
     * ```add <fqdn> <dns-type> <value>```
     * ```update <fqdn> <value>```
     * ```alter <fqdn> <dns-type> <value>```
-    * ```delete <fqdn>```
+    * ```delete <fqdn> <dns-type> <value>```
     * ```table```
     * ```csv```
 
@@ -49,7 +49,9 @@ Log in to your Account
     * ```dns_type``` is the record type (A, AAAA, CNAME, TXT, ...)
     * ```value``` is the new value of the resource record
 
-* ```delete(resource_name)```
+* ```delete(resource_name, dns_type, value)```
     Delete a resource record.
     * ```resource_name``` is the name of the entry
+    * ```dns_type``` is the record type (A, AAAA, CNAME, TXT, ...)
+    * ```value``` is the new value of the resource record
 
