@@ -73,6 +73,7 @@ def add(resource_name: str=None, dns_type: str=None, value: str=None, *args):
         error('usage: world4you add <fqdn> <dns-type> <value>')
         return False
     api.add(resource_name, dns_type, value)
+    return True
 
 
 def update(resource_name: str=None, value: str=None, *args):
@@ -80,6 +81,7 @@ def update(resource_name: str=None, value: str=None, *args):
         error('usage: word4you update <fqdn> <value>')
         return False
     api.update(resource_name, value)
+    return True
 
 
 def alter(resource_name: str=None, dns_type: str=None, value: str=None, *args):
@@ -87,6 +89,7 @@ def alter(resource_name: str=None, dns_type: str=None, value: str=None, *args):
         error('usage: world4you alter <fqdn> <dns-type> <value>')
         return False
     api.alter(resource_name, dns_type, value)
+    return True
 
 
 def delete(resource_name: str=None, *args):
@@ -94,6 +97,7 @@ def delete(resource_name: str=None, *args):
         error('usage: world4you delete <fqdn>')
         return False
     api.delete(resource_name)
+    return True
 
 
 def table(*args):
