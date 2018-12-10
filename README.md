@@ -36,18 +36,18 @@ Log in to your Account
     Add a resource record.
     * ```resource_name``` is the name of the entry
     * ```dns_type``` is the record type (A, AAAA, CNAME, TXT, ...)
-    * ```value``` is the 
+    * ```value``` is the new value of the resource record
 
 * ```update(resource_name, value)```
     Update a resource record.
     * ```resource_name``` is the name of the entry
-    * ```value``` is the 
+    * ```value``` is the new value of the resource record
 
 * ```alter(resource_name, dns_type, value)```
     Alter a resource record.
     * ```resource_name``` is the name of the entry
     * ```dns_type``` is the record type (A, AAAA, CNAME, TXT, ...)
-    * ```value``` is the 
+    * ```value``` is the new value of the resource record
 
 * ```delete(resource_name)```
     Delete a resource record.
