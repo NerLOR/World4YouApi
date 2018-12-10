@@ -4,7 +4,7 @@ SCRIPTPATH='../'
 
 # Usage: add  _acme-challenge.www.domain.com   "XKrxpRBosdIKFzxW_CT3KLZNf6q0HG9i01zxXp5CPBs"
 # Used to add txt record
-dns_w4yapi_add() {
+dns_w4y_add() {
     FQDN="$1"
     TXT_VALUE="$2"
 
@@ -26,7 +26,7 @@ dns_w4yapi_add() {
 
 # Usage: fulldomain txtvalue
 # Used to remove the txt record after validation
-dns_w4yapi_rm() {
+dns_w4y_rm() {
     FQDN="$1"
     TXT_VALUE="$2"
     ${SCRIPTPATH}world4you -u "$W4Y_USERNAME" -p "$W4Y_PASSWORD" delete "$FQDN" TXT "$TXT_VALUE"
