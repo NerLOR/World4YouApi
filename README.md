@@ -22,6 +22,9 @@ If no password or file is proveded, the password is read from ```stdin```.
     * ```table```
     * ```csv```
 
+## acme.sh integration
+To integrate this api to acme.sh see [here](https://github.com/NerLOR/World4YouApi/tree/master/acme.sh).
+
 ## World4YouApi.py
 Here you can find the ```World4YouApi``` class. 
 
