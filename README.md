@@ -16,45 +16,11 @@ from command line.
 If no password or file is provided, the password is read from ```stdin```.
 * ```action``` The action to be performed. Possible values: 
     * ```add <fqdn> <dns-type> <value>```
-    * ```update <fqdn> <value>```
-    * ```alter <fqdn> <dns-type> <value>```
+    * ```update <fqdn> <dns-type> <old-value> <new-value>```
+    * ```alter <fqdn> <old-dns-type> <old-value> <new-dns-type> [<new-value>]```
     * ```delete <fqdn> <dns-type> <value>```
     * ```table```
     * ```csv```
 
 ## acme.sh integration
 To integrate this api to acme.sh see [here](https://github.com/NerLOR/World4YouApi/tree/master/acme.sh).
-
-## World4YouApi.py
-Here you can find the ```World4YouApi``` class. 
-
-### Functions
-* ```login(username, password)```
-Log in to your Account 
-
-* ```get_resource_records()```
-    Download and save all resource records
-
-* ```add(resource_name, dns_type, value)```
-    Add a resource record.
-    * ```resource_name``` is the name of the entry
-    * ```dns_type``` is the record type (A, AAAA, CNAME, TXT, ...)
-    * ```value``` is the new value of the resource record
-
-* ```update(resource_name, value)```
-    Update a resource record.
-    * ```resource_name``` is the name of the entry
-    * ```value``` is the new value of the resource record
-
-* ```alter(resource_name, dns_type, value)```
-    Alter a resource record.
-    * ```resource_name``` is the name of the entry
-    * ```dns_type``` is the record type (A, AAAA, CNAME, TXT, ...)
-    * ```value``` is the new value of the resource record
-
-* ```delete(resource_name, dns_type, value)```
-    Delete a resource record.
-    * ```resource_name``` is the name of the entry
-    * ```dns_type``` is the record type (A, AAAA, CNAME, TXT, ...)
-    * ```value``` is the new value of the resource record
-
