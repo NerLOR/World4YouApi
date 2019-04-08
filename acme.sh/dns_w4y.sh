@@ -10,7 +10,7 @@ dns_w4y_add() {
 
     W4Y_USERNAME="${W4Y_USERNAME:-$(_readaccountconf_mutable W4Y_USERNAME)}"
     W4Y_PASSWORD="${W4Y_PASSWORD:-$(_readaccountconf_mutable W4Y_PASSWORD)}"
-    if [ -z "$W4Y_USERNAME" ] || [ -z "$W4Y_PASSWORD" ]; then
+    if [[ -z "$W4Y_USERNAME" ]] || [[ -z "$W4Y_PASSWORD" ]]; then
         W4Y_USERNAME=""
         W4Y_PASSWORD=""
         _err "You don't specified world4you username and password yet."

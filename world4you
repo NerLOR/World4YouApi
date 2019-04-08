@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.7
 
 from World4YouApi import World4YouApi
 import getpass
@@ -40,63 +40,47 @@ def error(*args, **kwargs):
     sys.stderr.flush()
 
 
-username = args.username
-if args.password:
-    password = args.password
-elif args.password_file:
-    file = open(args.password_file)
-    password = file.readline()
-    file.close()
-else:
-    password = getpass.getpass('Password: ', stream=sys.stderr)
-
-
-api = World4YouApi()
-
-try:
-    info('Logging in...', end='')
-    api.login(username, password)
-    info('\rSuccessfully logged in')
-
-    info('Retrieving DNS entries...', end='')
-    api.get_resource_records()
-    info('\rSuccessfully retrieved DNS entries')
-
-    info('')
-except ConnectionError as e:
-    error("\r" + str(e))
-    exit(5)
-
-
-def add(resource_name: str=None, dns_type: str=None, value: str=None, *args):
-    if not resource_name or not dns_type or not value or len(args) != 0:
+def add(record_name: str = None, record_type: str = None, record_value: str = None, *args):
+    if not record_name or not record_type or not record_value or len(args) != 0:
         error('usage: world4you add <fqdn> <dns-type> <value>')
         return False
-    api.add(resource_name, dns_type, value)
+    api.add(record_name, record_type, record_value)
     return True
 
 
-def update(resource_name: str=None, value: str=None, *args):
-    if not resource_name or not value or len(args) != 0:
-        error('usage: word4you update <fqdn> <value>')
+def update(record_name: str = None, record_type: str = None, record_value_old: str = None, record_value_new: str = None, *args):
+    if not record_name or not record_type or not record_value_old or not record_value_new or len(args) != 0:
+        error('usage: word4you update <fqdn> <dns-type> <old-value> <new-value>')
         return False
-    api.update(resource_name, value)
-    return True
-
-
-def alter(resource_name: str=None, dns_type: str=None, value: str=None, *args):
-    if not resource_name or not dns_type or not value or len(args) != 0:
-        error('usage: world4you alter <fqdn> <dns-type> <value>')
+    rr = api.resource_record(record_name, record_type, record_value_old)
+    if rr is None:
+        error('unable to find resource record')
         return False
-    api.alter(resource_name, dns_type, value)
+    api.update(rr, record_value_new)
     return True
 
 
-def delete(resource_name: str=None, dns_type: str=None, value: str=None, *args):
-    if not resource_name or not dns_type or not value or len(args) != 0:
+def alter(record_name: str = None, record_type_old: str = None, record_value_old: str = None, record_type_new: str = None, record_value_new: str = None, *args):
+    if not record_name or not record_type_old or not record_value_old or record_type_new or len(args) != 0:
+        error('usage: world4you alter <fqdn> <old-dns-type> <old-value> <new-dns-type> [<new-value>]')
+        return False
+    rr = api.resource_record(record_name, record_type_old, record_value_old)
+    if rr is None:
+        error('unable to find resource record')
+        return False
+    api.alter(rr, record_type_new, record_value_new)
+    return True
+
+
+def delete(record_name: str = None, record_type: str = None, record_value: str = None, *args):
+    if not record_name or not record_type or not record_value or len(args) != 0:
         error('usage: world4you delete <fqdn> <dns-type> <value>')
         return False
-    api.delete(resource_name, dns_type, value)
+    rr = api.resource_record(record_name, record_type, record_value)
+    if rr is None:
+        error('unable to find resource record')
+        return False
+    api.delete(rr)
     return True
 
 
@@ -107,9 +91,8 @@ def table(*args):
     print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
     print("| {name:^32s} | {type:^8s} | {value:^64s} |".format(name='Name', type='Type', value='Value'))
     print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
-    for rr in api.resource_records:
-        print("| {name:>32s} | {type:^8s} | {value:>64s} |".
-              format(name=rr['name'], type=rr['type'], value=rr['value']))
+    for rr_id, rr in api.resource_records.items():
+        print(f'| {rr.name:>32s} | {rr.type:^8s} | {rr.value:>64s} |')
     print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
     return True
 
@@ -118,9 +101,8 @@ def csv(*args):
     if len(args) != 0:
         error('usage: world4you csv')
         return False
-    for rr in api.resource_records:
-        print("{name:s},{type:s},\"{value:s}\"".
-              format(name=rr['name'], type=rr['type'], value=rr['value'].replace('"', '""')))
+    for rr_id, rr in api.resource_records.items():
+        print(f'{rr.name:s},{rr.type:s},\"{rr.value:s}\"')
     return True
 
 
@@ -148,7 +130,7 @@ def interactive():
                     error("usage: world4you reload")
                 else:
                     info('Retrieving DNS entries...', end='')
-                    api.get_resource_records()
+                    api.sync()
                     info('\rSuccessfully retrieved DNS entries')
             elif cmd == 'exit' or cmd == 'quit':
                 if len(args) != 0:
@@ -165,8 +147,8 @@ def interactive():
                     error("  reload")
                     error("  exit / quit")
                     error("  add <fqdn> <dns-type> <value>")
-                    error("  update <fqdn> <value>")
-                    error("  alter <fqdn> <dns-type> <value>")
+                    error("  update <fqdn> <dns-type> <old-value> <new-value>")
+                    error("  alter <fqdn> <old-dns-type> <old-value> <new-dns-type> [<new-value>]")
                     error("  delete <fqdn> <dns-type> <value>")
             else:
                 error("unknown action. Type 'help' for help")
@@ -176,37 +158,63 @@ def interactive():
             error("unable to find resource record")
 
 
-try:
-    if args.interactive:
-        interactive()
-    elif args.action == 'add':
-        if not add(*args.arg):
-            exit(1)
-    elif args.action == 'update':
-        if not update(*args.arg):
-            exit(1)
-    elif args.action == 'alter':
-        if not alter(*args.arg):
-            exit(1)
-    elif args.action == 'delete':
-        if not delete(*args.arg):
-            exit(1)
-    elif args.action == 'table':
-        if not table(*args.arg):
-            exit(1)
-    elif args.action == 'csv':
-        if not csv(*args.arg):
-            exit(1)
+if __name__ == '__main__':
+    username = args.username
+    if args.password:
+        password = args.password
+    elif args.password_file:
+        file = open(args.password_file)
+        password = file.readline()
+        file.close()
     else:
-        print("invalid action")
-        exit(4)
-except ConnectionError as e:
-    error(str(e))
-    exit(2)
-except IndexError as e:
-    error(str(e))
-    exit(3)
+        password = getpass.getpass('Password: ', stream=sys.stderr)
 
-exit(0)
+    api = World4YouApi()
+
+    try:
+        info('Logging in...', end='')
+        api.login(username, password)
+        info('\rSuccessfully logged in')
+
+        info('Retrieving DNS entries...', end='')
+        api.sync()
+        info('\rSuccessfully retrieved DNS entries')
+
+        info('')
+    except ConnectionError as e:
+        error("\r" + str(e))
+        exit(5)
+
+    try:
+        if args.interactive:
+            interactive()
+        elif args.action == 'add':
+            if not add(*args.arg):
+                exit(1)
+        elif args.action == 'update':
+            if not update(*args.arg):
+                exit(1)
+        elif args.action == 'alter':
+            if not alter(*args.arg):
+                exit(1)
+        elif args.action == 'delete':
+            if not delete(*args.arg):
+                exit(1)
+        elif args.action == 'table':
+            if not table(*args.arg):
+                exit(1)
+        elif args.action == 'csv':
+            if not csv(*args.arg):
+                exit(1)
+        else:
+            print("invalid action")
+            exit(4)
+    except ConnectionError as e:
+        error(str(e))
+        exit(2)
+    except IndexError as e:
+        error(str(e))
+        exit(3)
+    exit(0)
 
 
