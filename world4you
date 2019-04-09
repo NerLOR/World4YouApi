@@ -88,12 +88,12 @@ def table(*args):
     if len(args) != 0:
         error('usage: world4you table')
         return False
-    print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
-    print("| {name:^32s} | {type:^8s} | {value:^64s} |".format(name='Name', type='Type', value='Value'))
-    print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
+    print(f'+-{"":-<32s}-+-{"":-<8s}-+-{"":-<64s}-+')
+    print(f'| {"Name":^32s} | {"Type":^8s} | {"Value":^64s} |')
+    print(f'+-{"":-<32s}-+-{"":-<8s}-+-{"":-<64s}-+')
     for rr_id, rr in api.resource_records.items():
         print(f'| {rr.name:>32s} | {rr.type:^8s} | {rr.value:>64s} |')
-    print("+-{0:-<32s}-+-{0:-<8s}-+-{0:-<64s}-+".format(''))
+    print(f'+-{"":-<32s}-+-{"":-<8s}-+-{"":-<64s}-+')
     return True
 
 
@@ -182,7 +182,7 @@ if __name__ == '__main__':
 
         info('')
     except ConnectionError as e:
-        error("\r" + str(e))
+        error(f'\r{e}')
         exit(5)
 
     try:

@@ -212,14 +212,14 @@ class World4YouApi(DnsApi):
         try:
             r = self._request('/dns/', post, 'application/x-www-form-urlencoded')
         except ConnectionError as e:
-            raise ConnectionError(f'unable to add resource record: {str(e)}')
+            raise ConnectionError(f'unable to add resource record: {e}')
         self.sync(response=r)
 
     def update(self, resource_record: ResourceRecord, new_record_value: str) -> None:
         try:
             self.alter(resource_record, resource_record.type, new_record_value)
         except ConnectionError as e:
-            raise ConnectionError('unable to update resource record: ' + str(e))
+            raise ConnectionError(f'unable to update resource record: {e}')
 
     def alter(self, resource_record: ResourceRecord, new_record_type: str, new_record_value: str = None) -> None:
         if not self.logged_in:
@@ -241,7 +241,7 @@ class World4YouApi(DnsApi):
         try:
             r = self._request('/dns/', post, 'application/x-www-form-urlencoded')
         except ConnectionError as e:
-            raise ConnectionError(f'unable to alter resource table: {str(e)}')
+            raise ConnectionError(f'unable to alter resource table: {e}')
         self.sync(response=r)
 
     def delete(self, resource_record: ResourceRecord) -> None:
@@ -257,5 +257,5 @@ class World4YouApi(DnsApi):
         try:
             r = self._request('/dns/', post, 'application/x-www-form-urlencoded')
         except ConnectionError as e:
-            raise ConnectionError(f'unable to delete resource record: {str(e)}')
+            raise ConnectionError(f'unable to delete resource record: {e}')
         self.sync(response=r)
