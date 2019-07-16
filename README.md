@@ -9,9 +9,9 @@ from command line.
 
 ```world4you [-i] [-q] -u username [{-p pwd | -P file}] [{-f | -F}] [action [arg ...]]```
 
-If no password or file is provided, the password is read from ```stdin```. 
+**HINT:** If no password or file is provided, the password is read from ```stdin```. 
 
-If the provided *FQDN-Type-Value* combination is not unique, the script will not be able to update the resource record (see ```-f``` and ```-F```).
+**HINT:** If the provided *FQDN-Type-Value* combination is not unique, the script will not be able to update the resource record (see ```-f``` and ```-F```).
 
 * ```-i```, ```--interactive``` Interactive mode
 * ```-q```, ```--quiet``` Quiet Mode, do not output logging messages
