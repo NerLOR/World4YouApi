@@ -8,14 +8,18 @@ This Python script can be executed to update manipulate the resource records
 from command line.
 
 ```world4you [-i] [-q] -u username [{-p pwd | -P file}] [{-f | -F}] [action [arg ...]]```
+
+If no password or file is provided, the password is read from ```stdin```. 
+
+If the provided *FQDN-Type-Value* combination is not unique, the script will not be able to update the resource record (see ```-f``` and ```-F```).
+
 * ```-i```, ```--interactive``` Interactive mode
 * ```-q```, ```--quiet``` Quiet Mode, do not output logging messages
 * ```-u```, ```--username``` Username for World4You
 * ```-p pwd```, ```--password pwd``` Password as plain text
 * ```-P file```, ```--password-file file``` The first line of the given file is used as password 
-If no password or file is provided, the password is read from ```stdin```. 
-* ```-f```, If the provided *FQDN-Type-Value* combination is not unique, perform the specified action on **exactly one** matching resource record
-* ```-F```, If the provided *FQDN-Type-Value* combination is not unique, perform the specified action on **all** matching resource records
+* ```-f```, If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **exactly one** matching resource record
+* ```-F```, If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **all** matching resource records
 * ```action``` The action to be performed. Possible values: 
     * ```add <fqdn> <dns-type> <value>```
     * ```update {<id> | <fqdn> [<dns-type> [<old-value>]]} <new-value>```
