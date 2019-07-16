@@ -11,7 +11,7 @@ To integrate this api to acme.sh see [here](https://github.com/NerLOR/World4YouA
 
 
 ## world4you
-This Python script can be executed to update manipulate the resource records 
+This Python script can be executed to update and manipulate the resource records 
 from command line.
 
 ```world4you [-i] [-q] -u username [{-p pwd | -P file}] [{-f | -F}] [action [arg ...]]```
