@@ -18,8 +18,8 @@ If the provided *FQDN-Type-Value* combination is not unique, the script will not
 * ```-u```, ```--username``` Username for World4You
 * ```-p pwd```, ```--password pwd``` Password as plain text
 * ```-P file```, ```--password-file file``` The first line of the given file is used as password 
-* ```-f```, If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **exactly one** matching resource record
-* ```-F```, If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **all** matching resource records
+* ```-f```, ```--force-one``` If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **exactly one** matching resource record
+* ```-F```, ```--force-all``` If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **all** matching resource records
 * ```action``` The action to be performed. Possible values: 
     * ```add <fqdn> <dns-type> <value>```
     * ```update {<id> | <fqdn> [<dns-type> [<old-value>]]} <new-value>```
