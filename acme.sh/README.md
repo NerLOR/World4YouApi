@@ -11,7 +11,7 @@ cp ./World4YouApi/acme.sh/dns_w4y.sh /[...]/acme.sh/dnsapi/
 nano /[...]/acme.sh/dnsapi/dns_w4y.sh  # Change $SCRIPTPATH
 export W4Y_USERNAME='name'
 export W4Y_PASSWORD='pwd'
-acme.sh --issue -d example.com --dns dns_w4yapi
+acme.sh --issue -d example.com --dns dns_w4y
 ```
 
 For further information see [acme.sh Documentation](https://github.com/Neilpang/acme.sh/wiki/DNS-API-Dev-Guide).
