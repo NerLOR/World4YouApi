@@ -188,7 +188,7 @@ class World4YouApi(DnsApi):
                           r'<td.*?>\s*(.*?)\s*</td>\s*'
                           r'<td.*?>\s*<span.*?>.*?</span>\s*<div.*?>\s*<div.*?>\s*(.*?)\s*</div>\s*</div>\s*</td>\s*'
                           r'<td.*?>.*?<a.*?id="(.*?)".*?>.*?</a>\s*</td>', row.group(1))
-            record_id = int(m.group(4))
+            record_id = m.group(4)
             self._resource_records[record_id] = ResourceRecord(
                 record_name=m.group(1),
                 record_type=m.group(2),
