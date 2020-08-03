@@ -201,6 +201,11 @@ class MyWorld4You:
                 return p
         raise KeyError(f'Package with domain \'{domain}\' can not be found')
 
+    def get_package_by_fqdn(self, fqdn: str) -> Package:
+        for p in self.packages:
+            if fqdn.endswith('.' + p.domain) or fqdn == p.domain:
+                return p
+
     def get_resource_record(self, fqdn: str, rr_type: str = None, value: str = None,
                             prio: int = None) -> ResourceRecord:
         matches = self.get_resource_records(fqdn, rr_type, value, prio)
@@ -225,12 +230,12 @@ class MyWorld4You:
 
     def update_resource_record(self, resource_record: ResourceRecord, new_value: str = None, new_fqdn: str = None,
                                new_type: str = None, new_prio: int = None) -> bool:
-        package = self.get_package_by_domain('.'.join(resource_record.fqdn.split('.')[-2:]))
+        package = self.get_package_by_fqdn(resource_record.fqdn)
         r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
         inputs = parse_form(r.text, '<form name="EditDnsRecordForm"', '</form>')
 
         r = requests.post(f'{API_URL}/{package.id}/dns', {
-            'EditDnsRecordForm[name]': '.'.join((new_fqdn or resource_record.fqdn).split('.')[:-2]),
+            'EditDnsRecordForm[name]': (new_fqdn or resource_record.fqdn)[:-len(package.domain) - 1],
             'EditDnsRecordForm[dnsType][type]': new_type or resource_record.type,
             'EditDnsRecordForm[dnsType][prio]': new_prio or resource_record.prio,
             'EditDnsRecordForm[value]': new_value or resource_record.value,
@@ -248,7 +253,7 @@ class MyWorld4You:
             return False
 
     def delete_resource_record(self, resource_record: ResourceRecord) -> bool:
-        package = self.get_package_by_domain('.'.join(resource_record.fqdn.split('.')[-2:]))
+        package = self.get_package_by_fqdn(resource_record.fqdn)
         r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
         inputs = parse_form(r.text, '<form name="DeleteDnsRecordForm"', '</form>')
 
@@ -267,12 +272,12 @@ class MyWorld4You:
             return False
 
     def add_resource_record(self, rr_type: str, fqdn: str, value: str, prio: int = None) -> bool:
-        package = self.get_package_by_domain('.'.join(fqdn.split('.')[-2:]))
+        package = self.get_package_by_fqdn(fqdn)
         r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
         inputs = parse_form(r.text, '<form name="AddDnsRecordForm"', '</form>')
 
         r = requests.post(f'{API_URL}/{package.id}/dns', {
-            'AddDnsRecordForm[name]': '.'.join(fqdn.split('.')[:-2]),
+            'AddDnsRecordForm[name]': fqdn.split[:-len(package.domain) - 1],
             'AddDnsRecordForm[dnsType][type]': str(rr_type),
             'AddDnsRecordForm[dnsType][prio]': str(prio) if prio is not None else '',
             'AddDnsRecordForm[value]': str(value),
