@@ -50,11 +50,11 @@ def get_csrf_token(page: str) -> str:
 
 
 class ResourceRecord:
-    def __init__(self, rr_type: str, fqdn: str, value: str, priority: int = None):
+    def __init__(self, rr_type: str, fqdn: str, value: str, prio: int = None):
         self._type = rr_type.upper()
         self._fqdn = fqdn.lower()
         self._value = value
-        self._priority = priority
+        self._prio = prio
 
     @property
     def type(self) -> str:
@@ -69,18 +69,18 @@ class ResourceRecord:
         return self._value
 
     @property
-    def priority(self) -> int:
-        return self._priority
+    def prio(self) -> int:
+        return self._prio
 
     @property
     def id(self) -> str:
-        return base64.b64encode(self.__str__()).decode('ascii')
+        return base64.b64encode(f'{self.type}:{str(self.prio) + " " if self.prio is not None else ""}{self.fqdn}.:{self.value}').decode('ascii')
 
     def __str__(self) -> str:
-        return f'{self.type}:{str(self.priority) + " " if self.priority is not None else ""}{self.fqdn}.:{self.value}'
+        return f'<ResourceRecord{{{self.type}:{str(self.prio) + " " if self.prio is not None else ""}{self.fqdn}:{self.value}}}>'
 
     def __repr__(self) -> str:
-        return f'<ResourceRecord{{{self.__str__()}}}>'
+        return self.__str__()
 
 
 class Package:
@@ -200,6 +200,64 @@ class MyWorld4You:
                 return p
         raise KeyError(f'Package with domain \'{domain}\' can not be found')
 
+    def get_resource_record(self, fqdn: str, rr_type: str = None, value: str = None,
+                            prio: int = None) -> ResourceRecord:
+        matches = self.get_resource_records(fqdn, rr_type, value, prio)
+        if len(matches) == 0:
+            raise KeyError('No resource record can be found')
+        elif len(matches) > 1:
+            raise KeyError('Multiple resource records were found')
+        else:
+            return matches[0]
+
+    def get_resource_records(self, fqdn: str, rr_type: str = None, value: str = None,
+                             prio: int = None) -> List[ResourceRecord]:
+        matches = []
+        for p in self.packages:
+            for rr in p.resource_records:
+                if rr.fqdn == fqdn \
+                        and (rr_type is None or rr_type == rr.type) \
+                        and (value is None or value == rr.value) \
+                        and (prio is None or prio == rr.prio):
+                    matches.append(rr)
+        return matches
+
+    def update_resource_record(self, resource_record: ResourceRecord, new_value: str = None, new_fqdn: str = None,
+                               new_type: str = None, new_prio: int = None) -> bool:
+        pass
+
+    def delete_resource_record(self, resource_record: ResourceRecord) -> bool:
+        pass
+
+    def add_resource_record(self, rr_type: str, fqdn: str, value: str, prio: int = None) -> bool:
+        package = self.get_package_by_domain('.'.join(fqdn.split('.')[-2:]))
+        r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
+        inputs = parse_form(r.text, '<form name="AddDnsRecordForm"', '</form>')
+
+        r = requests.post(f'{API_URL}/{package.id}/dns', {
+            'AddDnsRecordForm[name]': '.'.join(fqdn.split('.')[:-2]),
+            'AddDnsRecordForm[dnsType][type]': str(rr_type),
+            'AddDnsRecordForm[dnsType][prio]': str(prio) if prio is not None else '',
+            'AddDnsRecordForm[value]': str(value),
+            'AddDnsRecordForm[aktivPaket]': str(package.id),
+            'AddDnsRecordForm[uniqueFormIdDP]': inputs['AddDnsRecordForm[uniqueFormIdDP]']['value'],
+            'AddDnsRecordForm[uniqueFormIdTTL]': inputs['AddDnsRecordForm[uniqueFormIdTTL]']['value'],
+            'AddDnsRecordForm[_token]': inputs['AddDnsRecordForm[_token]']['value']
+        }, cookies=self.get_cookies(), allow_redirects=False)
+
+        if r.status_code == 302:
+            self.load_packages()
+            return True
+        elif r.status_code == 500:
+            print(f'Error: Invalid input', file=sys.stderr)
+            return False
+        else:
+            pos1 = r.text.find('<span class="form-error-message">')
+            pos2 = r.text.find('</span>', pos1)
+            msg = re.sub(r'\s+', ' ', re.sub(r'<[^>]*>', ' ', r.text[pos1:pos2])).strip()
+            print(f'Error: {msg}', file=sys.stderr)
+            return False
+
     def get_cookies(self) -> Dict[str, str]:
         return {'W4YSESSID': self.session_id}
 
@@ -221,3 +279,5 @@ if __name__ == '__main__':
     print(api.login(sys.argv[1], sys.argv[2]))
     print(api.packages)
     print(api.get_package_by_domain('project-argos.at').resource_records)
+    print(api.get_resource_record('necronda.net', rr_type='A'))
+    print(api.add_resource_record('TXT', 'test.necronda.net', 'Ich bin ein Test 2'))
