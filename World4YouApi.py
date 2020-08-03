@@ -6,7 +6,6 @@ import requests
 import re
 import json
 import sys
-import base64
 
 
 API_URL = 'https://my.world4you.com/en'
@@ -50,11 +49,12 @@ def get_csrf_token(page: str) -> str:
 
 
 class ResourceRecord:
-    def __init__(self, rr_type: str, fqdn: str, value: str, prio: int = None):
+    def __init__(self, rr_type: str, fqdn: str, value: str, prio: int = None, rr_id: str = None):
         self._type = rr_type.upper()
         self._fqdn = fqdn.lower()
         self._value = value
         self._prio = prio
+        self._id = rr_id
 
     @property
     def type(self) -> str:
@@ -74,7 +74,7 @@ class ResourceRecord:
 
     @property
     def id(self) -> str:
-        return base64.b64encode(f'{self.type}:{str(self.prio) + " " if self.prio is not None else ""}{self.fqdn}.:{self.value}').decode('ascii')
+        return self._id
 
     def __str__(self) -> str:
         return f'<ResourceRecord{{{self.type}:{str(self.prio) + " " if self.prio is not None else ""}{self.fqdn}:{self.value}}}>'
@@ -189,9 +189,10 @@ class MyWorld4You:
         package._resource_records.clear()
         for rr in data_records:
             package._resource_records.append(ResourceRecord(rr['type'],
-                                                   rr['name'],
-                                                   rr['value'],
-                                                   rr['prio'] if len(rr['prio']) > 0 else None))
+                                             rr['name'],
+                                             rr['value'],
+                                             rr['prio'] if len(rr['prio']) > 0 else None,
+                                             rr['id']))
         return package._resource_records
 
     def get_package_by_domain(self, domain: str) -> Package:
@@ -224,10 +225,46 @@ class MyWorld4You:
 
     def update_resource_record(self, resource_record: ResourceRecord, new_value: str = None, new_fqdn: str = None,
                                new_type: str = None, new_prio: int = None) -> bool:
-        pass
+        package = self.get_package_by_domain('.'.join(resource_record.fqdn.split('.')[-2:]))
+        r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
+        inputs = parse_form(r.text, '<form name="EditDnsRecordForm"', '</form>')
+
+        r = requests.post(f'{API_URL}/{package.id}/dns', {
+            'EditDnsRecordForm[name]': '.'.join((new_fqdn or resource_record.fqdn).split('.')[:-2]),
+            'EditDnsRecordForm[dnsType][type]': new_type or resource_record.type,
+            'EditDnsRecordForm[dnsType][prio]': new_prio or resource_record.prio,
+            'EditDnsRecordForm[value]': new_value or resource_record.value,
+            'EditDnsRecordForm[id]': resource_record.id,
+            'EditDnsRecordForm[aktivPaket]': str(package.id),
+            'EditDnsRecordForm[uniqueFormIdDP]': inputs['EditDnsRecordForm[uniqueFormIdDP]']['value'],
+            'EditDnsRecordForm[uniqueFormIdTTL]': inputs['EditDnsRecordForm[uniqueFormIdTTL]']['value'],
+            'EditDnsRecordForm[_token]': inputs['EditDnsRecordForm[_token]']['value']
+        }, cookies=self.get_cookies(), allow_redirects=False)
+
+        if r.status_code == 302:
+            self.load_packages()
+            return True
+        else:
+            return False
 
     def delete_resource_record(self, resource_record: ResourceRecord) -> bool:
-        pass
+        package = self.get_package_by_domain('.'.join(resource_record.fqdn.split('.')[-2:]))
+        r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
+        inputs = parse_form(r.text, '<form name="DeleteDnsRecordForm"', '</form>')
+
+        r = requests.post(f'{API_URL}/{package.id}/deleteRecord', {
+            'DeleteDnsRecordForm[recordId]': resource_record.id,
+            'DeleteDnsRecordForm[aktivPaket]': str(package.id),
+            'DeleteDnsRecordForm[uniqueFormIdDP]': inputs['DeleteDnsRecordForm[uniqueFormIdDP]']['value'],
+            'DeleteDnsRecordForm[uniqueFormIdTTL]': inputs['DeleteDnsRecordForm[uniqueFormIdTTL]']['value'],
+            'DeleteDnsRecordForm[_token]': inputs['DeleteDnsRecordForm[_token]']['value']
+        }, cookies=self.get_cookies(), allow_redirects=False)
+
+        if r.status_code == 302:
+            self.load_packages()
+            return True
+        else:
+            return False
 
     def add_resource_record(self, rr_type: str, fqdn: str, value: str, prio: int = None) -> bool:
         package = self.get_package_by_domain('.'.join(fqdn.split('.')[-2:]))
@@ -272,12 +309,3 @@ class MyWorld4You:
     @property
     def packages(self) -> List[Package]:
         return self._packages.copy()
-
-
-if __name__ == '__main__':
-    api = MyWorld4You()
-    print(api.login(sys.argv[1], sys.argv[2]))
-    print(api.packages)
-    print(api.get_package_by_domain('project-argos.at').resource_records)
-    print(api.get_resource_record('necronda.net', rr_type='A'))
-    print(api.add_resource_record('TXT', 'test.necronda.net', 'Ich bin ein Test 2'))
