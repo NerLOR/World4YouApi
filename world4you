@@ -1,108 +1,95 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3.8
 
-from World4YouApi import World4YouApi
+from World4YouApi import MyWorld4You
 import getpass
 import sys
 import argparse
 
 
-parser = argparse.ArgumentParser(prog='world4you', description='An API for World4You DNS Services')
-parser.add_argument('-i', '--interactive', action='store_true',
-                    help='Activate interactive mode')
-parser.add_argument('-q', '--quiet', action='store_true',
-                    help='Do not output log messages')
-parser.add_argument('-u', '--username', metavar='username', type=str, required=True,
-                    help='Specify the username to be used')
-parser.add_argument('-p', '--password', metavar='pwd', type=str,
-                    help='Specify the password to be used')
-parser.add_argument('-P', '--password-file', metavar='file', type=str,
-                    help='Specify the password file to be read the password from')
-parser.add_argument('action', metavar='action', type=str, nargs='?',
-                    choices=['add', 'update', 'alter', 'delete', 'table', 'csv'],
-                    help='The action to be performed')
-parser.add_argument('arg', metavar='arg', nargs='*', type=str,
-                    help='Args for the specified action')
-args = parser.parse_args()
-
-v = 1
-if args.quiet:
-    v = 0
-
-
-def info(*args, **kwargs):
+def info(*cmd_args, **kwargs):
     if v > 0:
-        print(*args, **kwargs, file=sys.stderr)
+        print(*cmd_args, **kwargs, file=sys.stderr)
         sys.stderr.flush()
 
 
-def error(*args, **kwargs):
-    print(*args, **kwargs, file=sys.stderr)
+def error(*cmd_args, **kwargs):
+    print(*cmd_args, **kwargs, file=sys.stderr)
     sys.stderr.flush()
 
 
-def add(record_name: str = None, record_type: str = None, record_value: str = None, *args):
-    if not record_name or not record_type or not record_value or len(args) != 0:
+def add(record_name: str = None, record_type: str = None, record_value: str = None, *cmd_args):
+    if not record_name or not record_type or not record_value or len(cmd_args) != 0:
         error('usage: world4you add <fqdn> <dns-type> <value>')
         return False
-    api.add(record_name, record_type, record_value)
-    return True
+    return api.add_resource_record(record_type, record_name, record_value)
 
 
-def update(record_name: str = None, record_type: str = None, record_value_old: str = None, record_value_new: str = None, *args):
-    if not record_name or not record_type or not record_value_old or not record_value_new or len(args) != 0:
-        error('usage: word4you update <fqdn> <dns-type> <old-value> <new-value>')
+def update(record_name: str = None, record_type: str = None, record_value_old: str = None, record_value_new: str = None,
+           *cmd_args):
+    if record_value_new is None:
+        if record_value_old is None:
+            record_value_new = record_type
+            record_type = None
+        else:
+            record_value_new = record_value_old
+            record_value_old = None
+    if not record_name or not record_value_new or len(cmd_args) != 0:
+        error('usage: word4you update <fqdn> [<dns-type> [<old-value>]] <new-value>')
         return False
-    rr = api.resource_record(record_name, record_type, record_value_old)
-    if rr is None:
+    try:
+        rr = api.get_resource_record(fqdn=record_name, rr_type=record_type, value=record_value_old)
+    except KeyError:
         error('unable to find resource record')
         return False
-    api.update(rr, record_value_new)
-    return True
+    return api.update_resource_record(rr, new_value=record_value_new)
 
 
-def alter(record_name: str = None, record_type_old: str = None, record_value_old: str = None, record_type_new: str = None, record_value_new: str = None, *args):
-    if not record_name or not record_type_old or not record_value_old or record_type_new or len(args) != 0:
+def alter(record_name: str = None, record_type_old: str = None, record_value_old: str = None,
+          record_type_new: str = None, record_value_new: str = None, *cmd_args):
+    if not record_name or not record_type_old or not record_value_old or record_type_new or len(cmd_args) != 0:
         error('usage: world4you alter <fqdn> <old-dns-type> <old-value> <new-dns-type> [<new-value>]')
         return False
-    rr = api.resource_record(record_name, record_type_old, record_value_old)
-    if rr is None:
+    try:
+        rr = api.get_resource_record(record_name, record_type_old, record_value_old)
+    except KeyError:
         error('unable to find resource record')
         return False
-    api.alter(rr, record_type_new, record_value_new)
-    return True
+    return api.update_resource_record(rr, new_type=record_type_new, new_value=record_value_new)
 
 
-def delete(record_name: str = None, record_type: str = None, record_value: str = None, *args):
-    if not record_name or not record_type or not record_value or len(args) != 0:
-        error('usage: world4you delete <fqdn> <dns-type> <value>')
+def delete(record_name: str = None, record_type: str = None, record_value: str = None, *cmd_args):
+    if not record_name or len(cmd_args) != 0:
+        error('usage: world4you delete <fqdn> [<dns-type> [<value>]]')
         return False
-    rr = api.resource_record(record_name, record_type, record_value)
-    if rr is None:
+    try:
+        rr = api.get_resource_record(record_name, record_type, record_value)
+    except KeyError:
         error('unable to find resource record')
         return False
-    api.delete(rr)
-    return True
+    return api.delete_resource_record(rr)
 
 
-def table(*args):
-    if len(args) != 0:
+def table(*cmd_args):
+    if len(cmd_args) != 0:
         error('usage: world4you table')
         return False
     print(f'+-{"":-<32s}-+-{"":-<8s}-+-{"":-<64s}-+')
     print(f'| {"Name":^32s} | {"Type":^8s} | {"Value":^64s} |')
     print(f'+-{"":-<32s}-+-{"":-<8s}-+-{"":-<64s}-+')
-    for rr_id, rr in api.resource_records.items():
-        print(f'| {rr.name:>32s} | {rr.type:^8s} | {rr.value:>64s} |')
+    for p in api.packages:
+        for rr in p.resource_records:
+            print(f'| {rr.fqdn:>32s} | {rr.type:^8s} | {rr.value:>64s} |')
     print(f'+-{"":-<32s}-+-{"":-<8s}-+-{"":-<64s}-+')
     return True
 
 
-def csv(*args):
-    if len(args) != 0:
+def csv(*cmd_args):
+    if len(cmd_args) != 0:
         error('usage: world4you csv')
         return False
-    for rr_id, rr in api.resource_records.items():
-        print(f'{rr.name:s},{rr.type:s},\"{rr.value:s}\"')
+    for p in api.packages:
+        for rr in p.resource_records:
+            print(f'{rr.fqdn:s},{rr.type:s},\"{rr.value:s}\"')
     return True
 
 
@@ -110,35 +97,35 @@ def interactive():
     while True:
         print('> ', file=sys.stderr, end='')
         line = input()
-        args = line.split(' ')
-        cmd = args.pop(0)
+        cmd_args = line.split(' ')
+        cmd = cmd_args.pop(0)
         try:
             if cmd == 'add':
-                add(*args)
+                add(*cmd_args)
             elif cmd == 'update':
-                update(*args)
+                update(*cmd_args)
             elif cmd == 'alter':
-                alter(*args)
+                alter(*cmd_args)
             elif cmd == 'delete':
-                delete(*args)
+                delete(*cmd_args)
             elif cmd == 'table' or cmd == 'list':
-                table(*args)
+                table(*cmd_args)
             elif cmd == 'csv':
-                csv(*args)
+                csv(*cmd_args)
             elif cmd == 'reload':
-                if len(args) != 0:
+                if len(cmd_args) != 0:
                     error("usage: world4you reload")
                 else:
                     info('Retrieving DNS entries...', end='')
-                    api.sync()
+                    api.load_packages()
                     info('\rSuccessfully retrieved DNS entries')
             elif cmd == 'exit' or cmd == 'quit':
-                if len(args) != 0:
+                if len(cmd_args) != 0:
                     error("usage: world4you " + cmd)
                 error("Goodbye!")
                 exit(0)
             elif cmd == 'help':
-                if len(args) != 0:
+                if len(cmd_args) != 0:
                     error("usage: help")
                 else:
                     error("Commands: ")
@@ -147,9 +134,9 @@ def interactive():
                     error("  reload")
                     error("  exit / quit")
                     error("  add <fqdn> <dns-type> <value>")
-                    error("  update <fqdn> <dns-type> <old-value> <new-value>")
+                    error("  update <fqdn> [<dns-type> [<old-value>]] <new-value>")
                     error("  alter <fqdn> <old-dns-type> <old-value> <new-dns-type> [<new-value>]")
-                    error("  delete <fqdn> <dns-type> <value>")
+                    error("  delete <fqdn> [<dns-type> [<value>]]")
             else:
                 error("unknown action. Type 'help' for help")
         except ConnectionError as e:
@@ -159,6 +146,28 @@ def interactive():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(prog='world4you', description='An API for World4You DNS Services')
+    parser.add_argument('-i', '--interactive', action='store_true',
+                        help='Activate interactive mode')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='Do not output log messages')
+    parser.add_argument('-u', '--username', metavar='username', type=str, required=True,
+                        help='Specify the username to be used')
+    parser.add_argument('-p', '--password', metavar='pwd', type=str,
+                        help='Specify the password to be used')
+    parser.add_argument('-P', '--password-file', metavar='file', type=str,
+                        help='Specify the password file to be read the password from')
+    parser.add_argument('action', metavar='action', type=str, nargs='?',
+                        choices=['add', 'update', 'alter', 'delete', 'table', 'csv'],
+                        help='The action to be performed')
+    parser.add_argument('arg', metavar='arg', nargs='*', type=str,
+                        help='Args for the specified action')
+    args = parser.parse_args()
+
+    v = 1
+    if args.quiet:
+        v = 0
+
     username = args.username
     if args.password:
         password = args.password
@@ -169,17 +178,15 @@ if __name__ == '__main__':
     else:
         password = getpass.getpass('Password: ', stream=sys.stderr)
 
-    api = World4YouApi()
+    api = MyWorld4You()
 
     try:
         info('Logging in...', end='')
-        api.login(username, password)
-        info('\rSuccessfully logged in')
-
-        info('Retrieving DNS entries...', end='')
-        api.sync()
-        info('\rSuccessfully retrieved DNS entries')
-
+        if api.login(username, password):
+            info('\rSuccessfully logged in')
+        else:
+            error('Invalid credentials')
+            exit(5)
         info('')
     except ConnectionError as e:
         error(f'\r{e}')
@@ -216,5 +223,3 @@ if __name__ == '__main__':
         error(str(e))
         exit(3)
     exit(0)
-
-
