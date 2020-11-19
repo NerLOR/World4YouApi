@@ -277,7 +277,7 @@ class MyWorld4You:
         inputs = parse_form(r.text, '<form name="AddDnsRecordForm"', '</form>')
 
         r = requests.post(f'{API_URL}/{package.id}/dns', {
-            'AddDnsRecordForm[name]': fqdn.split[:-len(package.domain) - 1],
+            'AddDnsRecordForm[name]': fqdn[:-len(package.domain) - 1],
             'AddDnsRecordForm[dnsType][type]': str(rr_type),
             'AddDnsRecordForm[dnsType][prio]': str(prio) if prio is not None else '',
             'AddDnsRecordForm[value]': str(value),
