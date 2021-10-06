@@ -14,23 +14,25 @@ Part of this API is used in [acme.sh](https://github.com/NerLOR/acme.sh).
 This Python script can be executed to update and manipulate the resource records 
 from command line.
 
-```world4you [-i] [-q] -u username [{-p pwd | -P file}] [{-f | -F}] [action [arg ...]]```
+```sh
+world4you [-i] [-q] -u username [{-p pwd | -P file}] [{-f | -F}] [action [arg ...]]
+```
 
-**HINT:** If no password or file is provided, the password is read from ```stdin```. 
+**HINT:** If no password or file is provided, the password is read from `stdin`.
 
-**HINT:** If the provided *FQDN-Type-Value* combination is not unique, the script will not be able to perform the specified action on the resource record (see ```-f``` and ```-F```).
+**HINT:** If the provided *FQDN-Type-Value* combination is not unique, the script will not be able to perform the specified action on the resource record (see `-f` and `-F`).
 
-* ```-i```, ```--interactive``` Interactive mode
-* ```-q```, ```--quiet``` Quiet Mode, do not output logging messages
-* ```-u```, ```--username``` Username for World4You
-* ```-p pwd```, ```--password pwd``` Password as plain text
-* ```-P file```, ```--password-file file``` The first line of the given file is used as password 
-* ```-f```, ```--force-one``` If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **exactly one** matching resource record
-* ```-F```, ```--force-all``` If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **all** matching resource records
-* ```action``` The action to be performed. Possible values: 
-    * ```add <fqdn> <dns-type> <value>```
-    * ```update {<id> | <fqdn> [<dns-type> [<old-value>]]} <new-value>```
-    * ```alter {<id> | <fqdn> [<old-dns-type> [<old-value>]]} <new-dns-type> [<new-value>]```
-    * ```delete {<id> | <fqdn> [<dns-type> [<value>]]}```
-    * ```table```
-    * ```csv```
+* `-i`, `--interactive` Interactive mode
+* `-q`, `--quiet` Quiet Mode, do not output logging messages
+* `-u`, `--username` Username for World4You
+* `-p pwd`, `--password pwd` Password as plain text
+* `-P file`, `--password-file file` The first line of the given file is used as password
+* `-f`, `--force-one` If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **exactly one** matching resource record
+* `-F`, `--force-all` If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **all** matching resource records
+* `action` The action to be performed. Possible values:
+    * `add <fqdn> <dns-type> <value>`
+    * `update {<id> | <fqdn> [<dns-type> [<old-value>]]} <new-value>`
+    * `alter {<id> | <fqdn> [<old-dns-type> [<old-value>]]} <new-dns-type> [<new-value>]`
+    * `delete {<id> | <fqdn> [<dns-type> [<value>]]}`
+    * `table`
+    * `csv`
