@@ -47,6 +47,24 @@ def get_csrf_token(page: str) -> str:
             return value
 
 
+def get_form_error_message(page: str) -> str or None:
+    start = '<div class="form-error-message">'
+    stop = '</div>'
+
+    pos1 = page.find(start)
+    if pos1 == -1:
+        return None
+
+    pos2 = page.find(stop, pos1 + len(start))
+    if pos2 == -1:
+        return None
+
+    msg = page[pos1 + len(start):pos2]
+    msg = re.sub(r'\s+', ' ', re.sub(r'<[^>]*>', ' ', msg)).strip()
+
+    return msg
+
+
 class ResourceRecord:
     def __init__(self, rr_type: str, fqdn: str, value: str, prio: int = None, rr_id: str = None):
         self._type = rr_type.upper()
@@ -239,17 +257,20 @@ class MyWorld4You:
             'EditDnsRecordForm[dnsType][prio]': new_prio or resource_record.prio,
             'EditDnsRecordForm[value]': new_value or resource_record.value,
             'EditDnsRecordForm[id]': resource_record.id,
-            'EditDnsRecordForm[aktivPaket]': str(package.id),
             'EditDnsRecordForm[uniqueFormIdDP]': inputs['EditDnsRecordForm[uniqueFormIdDP]']['value'],
-            'EditDnsRecordForm[uniqueFormIdTTL]': inputs['EditDnsRecordForm[uniqueFormIdTTL]']['value'],
             'EditDnsRecordForm[_token]': inputs['EditDnsRecordForm[_token]']['value']
         }, cookies=self.get_cookies(), allow_redirects=False)
 
         if r.status_code == 302:
             self.load_packages()
             return True
+        elif r.status_code == 500:
+            raise RuntimeError('Invalid input')
+        elif r.status_code == 200:
+            msg = get_form_error_message(r.text)
+            raise RuntimeError(msg)
         else:
-            return False
+            raise RuntimeError(f'Unknown error: {r.status_code} {r.reason}')
 
     def delete_resource_record(self, resource_record: ResourceRecord) -> bool:
         package = self.get_package_by_fqdn(resource_record.fqdn)
@@ -258,17 +279,20 @@ class MyWorld4You:
 
         r = requests.post(f'{API_URL}/{package.id}/deleteRecord', {
             'DeleteDnsRecordForm[recordId]': resource_record.id,
-            'DeleteDnsRecordForm[aktivPaket]': str(package.id),
             'DeleteDnsRecordForm[uniqueFormIdDP]': inputs['DeleteDnsRecordForm[uniqueFormIdDP]']['value'],
-            'DeleteDnsRecordForm[uniqueFormIdTTL]': inputs['DeleteDnsRecordForm[uniqueFormIdTTL]']['value'],
             'DeleteDnsRecordForm[_token]': inputs['DeleteDnsRecordForm[_token]']['value']
         }, cookies=self.get_cookies(), allow_redirects=False)
 
         if r.status_code == 302:
             self.load_packages()
             return True
+        elif r.status_code == 500:
+            raise RuntimeError('Invalid input')
+        elif r.status_code == 200:
+            msg = get_form_error_message(r.text)
+            raise RuntimeError(msg)
         else:
-            return False
+            raise RuntimeError(f'Unknown error: {r.status_code} {r.reason}')
 
     def add_resource_record(self, rr_type: str, fqdn: str, value: str, prio: int = None) -> bool:
         package = self.get_package_by_fqdn(fqdn)
@@ -280,9 +304,7 @@ class MyWorld4You:
             'AddDnsRecordForm[dnsType][type]': str(rr_type),
             'AddDnsRecordForm[dnsType][prio]': str(prio) if prio is not None else '',
             'AddDnsRecordForm[value]': str(value),
-            'AddDnsRecordForm[aktivPaket]': str(package.id),
             'AddDnsRecordForm[uniqueFormIdDP]': inputs['AddDnsRecordForm[uniqueFormIdDP]']['value'],
-            'AddDnsRecordForm[uniqueFormIdTTL]': inputs['AddDnsRecordForm[uniqueFormIdTTL]']['value'],
             'AddDnsRecordForm[_token]': inputs['AddDnsRecordForm[_token]']['value']
         }, cookies=self.get_cookies(), allow_redirects=False)
 
@@ -290,14 +312,12 @@ class MyWorld4You:
             self.load_packages()
             return True
         elif r.status_code == 500:
-            print(f'Error: Invalid input', file=sys.stderr)
-            return False
+            raise RuntimeError('Invalid input')
+        elif r.status_code == 200:
+            msg = get_form_error_message(r.text)
+            raise RuntimeError(msg)
         else:
-            pos1 = r.text.find('<span class="form-error-message">')
-            pos2 = r.text.find('</span>', pos1)
-            msg = re.sub(r'\s+', ' ', re.sub(r'<[^>]*>', ' ', r.text[pos1:pos2])).strip()
-            print(f'Error: {msg}', file=sys.stderr)
-            return False
+            raise RuntimeError(f'Unknown error: {r.status_code} {r.reason}')
 
     def get_cookies(self) -> Dict[str, str]:
         return {'W4YSESSID': self.session_id}
