@@ -14,7 +14,7 @@ Part of this API is used in [acme.sh](https://github.com/NerLOR/acme.sh).
 This Python script can be executed to update and manipulate the resource records 
 from command line.
 
-```sh
+```
 world4you [-i] [-q] -u username [{-p pwd | -P file}] [{-f | -F}] [action [arg ...]]
 ```
 
