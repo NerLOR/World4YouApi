@@ -70,16 +70,39 @@ def delete(record_name: str = None, record_type: str = None, record_value: str =
 
 
 def table(*cmd_args):
-    if len(cmd_args) != 0:
-        error('usage: world4you table')
+    if not (len(cmd_args) == 0 or (len(cmd_args) == 1 and cmd_args[0] == 'full')):
+        error('usage: world4you table [full]')
         return False
-    print(f'+-{"":-<32s}-+-{"":-<8s}-+-{"":-<64s}-+')
-    print(f'| {"Name":^32s} | {"Type":^8s} | {"Value":^64s} |')
-    print(f'+-{"":-<32s}-+-{"":-<8s}-+-{"":-<64s}-+')
+
+    len_fqdn, len_value = 0, 0
     for p in api.packages:
         for rr in p.resource_records:
-            print(f'| {rr.fqdn:>32s} | {rr.type:^8s} | {rr.value:>64s} |')
-    print(f'+-{"":-<32s}-+-{"":-<8s}-+-{"":-<64s}-+')
+            if len(rr.fqdn) > len_fqdn:
+                len_fqdn = len(rr.fqdn)
+            if len(rr.value) > len_value:
+                len_value = len(rr.value)
+
+    len_val_col = min(len_value, 72)
+    if 'full' not in cmd_args:
+        len_value = len_val_col
+
+    print(f'┏━{"":━<{len_fqdn}s}━┯━{"":━<8s}━┯━{"":━<{len_val_col}s}━┓')
+    print(f'┃ {"Name":^{len_fqdn}s} │ {"Type":^8s} │ {"Value":^{len_val_col}s} ┃')
+    print(f'┣━{"":━<{len_fqdn}s}━┿━{"":━<8s}━┿━{"":━<{len_val_col}s}━┫')
+
+    first = True
+    for p in api.packages:
+        for rr in p.resource_records:
+            if not first:
+                print(f'┠─{"":─<{len_fqdn}s}─┼─{"":─<8s}─┼─{"":─<{len_val_col}s}─┨')
+            values = [rr.value[start:start + len_value] for start in range(0, len(rr.value), len_value)]
+            align = '>' if len(values) == 1 else '<'
+            print(f'┃ {rr.fqdn:>{len_fqdn}s} │ {rr.type:^8s} │ {values[0]:{align}{len_val_col}s} ┃')
+            for v in values[1:]:
+                print(f'┃ {"":<{len_fqdn}s} │ {"":<8s} │ {v:{align}{len_val_col}s} ┃')
+            first = False
+
+    print(f'┗━{"":━<{len_fqdn}s}━┷━{"":━<8s}━┷━{"":━<{len_val_col}s}━┛')
     return True
 
 
@@ -130,7 +153,7 @@ def interactive():
                 else:
                     error("Commands: ")
                     error("  help")
-                    error("  list / table")
+                    error("  list / table [full]")
                     error("  reload")
                     error("  exit / quit")
                     error("  add <fqdn> <dns-type> <value>")

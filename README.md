@@ -34,5 +34,5 @@ world4you [-i] [-q] -u username [{-p pwd | -P file}] [{-f | -F}] [action [arg ..
     * `update {<id> | <fqdn> [<dns-type> [<old-value>]]} <new-value>`
     * `alter {<id> | <fqdn> [<old-dns-type> [<old-value>]]} <new-dns-type> [<new-value>]`
     * `delete {<id> | <fqdn> [<dns-type> [<value>]]}`
-    * `table`
+    * `table [full]`
     * `csv`
