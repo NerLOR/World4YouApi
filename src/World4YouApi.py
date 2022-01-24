@@ -9,6 +9,8 @@ import sys
 
 API_URL = 'https://my.world4you.com/en'
 KEY_VALUE = re.compile(r'([^=\s<>]+)(="([^"]*)")?')
+HTML_TAG = re.compile(r'<[^>]*>')
+SPACES = re.compile(r'[ \t]+')
 
 
 def parse_form(page: str, pre: str = '<form', post: str = '</form>') -> Dict[str, Dict[str, str]]:
@@ -132,22 +134,29 @@ class Package:
 
 class MyWorld4You:
     def __init__(self):
-        self._session_id = None
+        self._session = requests.session()
         self._customer_id = None
         self._packages = []
 
+    def get(self, path: str) -> requests.Response:
+        return self._session.get(f'{API_URL}{path}')
+
+    def post(self, path: str, data, allow_redirects: bool = True) -> requests.Response:
+        return self._session.post(f'{API_URL}{path}', data, headers={'X-Requested-With': 'XMLHttpRequest'},
+                                  allow_redirects=allow_redirects)
+
     def login(self, user_nr: int, password: str) -> bool:
-        r = requests.get(f'{API_URL}/login')
-        self._session_id = r.cookies['W4YSESSID']
+        r = self.get('/login')
         inputs = parse_form(r.text, f'<form action="{API_URL}/login" id="loginForm"')
-        r = requests.post(f'{API_URL}/login', {
+
+        r = self.post('/login', {
             '_username': str(user_nr),
             '_password': str(password),
             '_csrf_token': inputs['_csrf_token']['value']
-        }, cookies=self.get_cookies(), headers={'X-Requested-With': 'XMLHttpRequest'})
+        })
         res = json.loads(r.text)
+
         if r.status_code == 200 and res['success']:
-            self._session_id = r.cookies['W4YSESSID']
             self._customer_id = user_nr
             self.load_packages()
             return True
@@ -160,31 +169,14 @@ class MyWorld4You:
 
     def load_packages(self) -> List[Package]:
         self._packages.clear()
-        r = requests.get(f'{API_URL}/dashboard/paketuebersicht', cookies=self.get_cookies())
-        tbody_pos1 = r.text.find('<tbody>', r.text.find('<table id="paketTable"'))
-        tbody_pos2 = r.text.find('</tbody>', tbody_pos1)
-        table = r.text[tbody_pos1:tbody_pos2]
-        tr_pos_end = 0
-        while True:
-            tr_pos_start = table.find('<tr', tr_pos_end)
-            if tr_pos_start < 0:
-                break
-            tr_pos_end = table.find('</tr>', tr_pos_start)
-            tr = table[tr_pos_start:tr_pos_end]
-            td_pos_end = 0
-            p_type, p_id, p_domain = None, None, None
-            for i in range(3):
-                td_pos_start = tr.find('<td', td_pos_end)
-                if td_pos_start < 0:
-                    break
-                td_pos_end = tr.find('</td>', td_pos_start)
-                td = re.sub(r'\s+', ' ', re.sub(r'<[^>]*>', ' ', tr[td_pos_start:td_pos_end])).strip()
-                if i == 0:
-                    p_type = td
-                elif i == 1:
-                    p_id = int(td)
-                elif i == 2:
-                    p_domain = td
+        r = self.get('/')
+
+        ul_p1 = r.text.find('<ul class="nav header-paket-list"')
+        ul_p2 = r.text.find('</ul>', ul_p1)
+        ul = [line.strip() for line in SPACES.sub(' ', HTML_TAG.sub('', r.text[ul_p1:ul_p2])).splitlines()]
+
+        domains = [(a, b.split(',')[0].strip(), int(b.split(',')[1].strip())) for a, b in zip(ul[::2], ul[1::2])]
+        for p_domain, p_type, p_id in domains:
             package = Package(p_id, p_domain, p_type)
             self._packages.append(package)
             self.load_resource_records(package)
@@ -193,10 +185,12 @@ class MyWorld4You:
     def load_resource_records(self, package: Package) -> List[ResourceRecord]:
         if package not in self._packages:
             raise KeyError(f'Can not load resource records from foreign package')
-        r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
+
+        r = self.get(f'/{package.id}/dns')
         pos1 = r.text.find('<meta id="currentDns"')
         pos2 = r.text.find('>', pos1)
         meta = r.text[pos1:pos2]
+
         data_records = []
         for kv in KEY_VALUE.finditer(meta[21:]):
             key = kv.group(1)
@@ -205,11 +199,12 @@ class MyWorld4You:
                 data_records = json.loads(value.replace('&quot;', '"'))
         package._resource_records.clear()
         for rr in data_records:
-            package._resource_records.append(ResourceRecord(rr['type'],
-                                             rr['name'],
-                                             rr['value'],
-                                             rr['prio'] if len(rr['prio']) > 0 else None,
-                                             rr['id']))
+            package._resource_records.append(
+                ResourceRecord(rr['type'],
+                               rr['name'],
+                               rr['value'],
+                               rr['prio'] if len(rr['prio']) > 0 else None,
+                               rr['id']))
         return package._resource_records
 
     def get_package_by_domain(self, domain: str) -> Package:
@@ -248,10 +243,10 @@ class MyWorld4You:
     def update_resource_record(self, resource_record: ResourceRecord, new_value: str = None, new_fqdn: str = None,
                                new_type: str = None, new_prio: int = None) -> bool:
         package = self.get_package_by_fqdn(resource_record.fqdn)
-        r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
+        r = self.get(f'/{package.id}/dns')
         inputs = parse_form(r.text, '<form name="EditDnsRecordForm"', '</form>')
 
-        r = requests.post(f'{API_URL}/{package.id}/dns', {
+        r = self.post(f'/{package.id}/dns', {
             'EditDnsRecordForm[name]': (new_fqdn or resource_record.fqdn)[:-len(package.domain) - 1],
             'EditDnsRecordForm[dnsType][type]': new_type or resource_record.type,
             'EditDnsRecordForm[dnsType][prio]': new_prio or resource_record.prio,
@@ -259,7 +254,7 @@ class MyWorld4You:
             'EditDnsRecordForm[id]': resource_record.id,
             'EditDnsRecordForm[uniqueFormIdDP]': inputs['EditDnsRecordForm[uniqueFormIdDP]']['value'],
             'EditDnsRecordForm[_token]': inputs['EditDnsRecordForm[_token]']['value']
-        }, cookies=self.get_cookies(), allow_redirects=False)
+        }, allow_redirects=False)
 
         if r.status_code == 302:
             self.load_packages()
@@ -274,14 +269,14 @@ class MyWorld4You:
 
     def delete_resource_record(self, resource_record: ResourceRecord) -> bool:
         package = self.get_package_by_fqdn(resource_record.fqdn)
-        r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
+        r = self.get(f'/{package.id}/dns')
         inputs = parse_form(r.text, '<form name="DeleteDnsRecordForm"', '</form>')
 
-        r = requests.post(f'{API_URL}/{package.id}/dns/record/delete', {
+        r = self.post(f'/{package.id}/dns/record/delete', {
             'DeleteDnsRecordForm[recordId]': resource_record.id,
             'DeleteDnsRecordForm[uniqueFormIdDP]': inputs['DeleteDnsRecordForm[uniqueFormIdDP]']['value'],
             'DeleteDnsRecordForm[_token]': inputs['DeleteDnsRecordForm[_token]']['value']
-        }, cookies=self.get_cookies(), allow_redirects=False)
+        }, allow_redirects=False)
 
         if r.status_code == 302:
             self.load_packages()
@@ -296,17 +291,17 @@ class MyWorld4You:
 
     def add_resource_record(self, rr_type: str, fqdn: str, value: str, prio: int = None) -> bool:
         package = self.get_package_by_fqdn(fqdn)
-        r = requests.get(f'{API_URL}/{package.id}/dns', cookies=self.get_cookies())
+        r = self.get(f'/{package.id}/dns')
         inputs = parse_form(r.text, '<form name="AddDnsRecordForm"', '</form>')
 
-        r = requests.post(f'{API_URL}/{package.id}/dns', {
+        r = self.post(f'/{package.id}/dns', {
             'AddDnsRecordForm[name]': fqdn[:-len(package.domain) - 1],
             'AddDnsRecordForm[dnsType][type]': str(rr_type),
             'AddDnsRecordForm[dnsType][prio]': str(prio) if prio is not None else '',
             'AddDnsRecordForm[value]': str(value),
             'AddDnsRecordForm[uniqueFormIdDP]': inputs['AddDnsRecordForm[uniqueFormIdDP]']['value'],
             'AddDnsRecordForm[_token]': inputs['AddDnsRecordForm[_token]']['value']
-        }, cookies=self.get_cookies(), allow_redirects=False)
+        }, allow_redirects=False)
 
         if r.status_code == 302:
             self.load_packages()

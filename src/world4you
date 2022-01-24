@@ -198,7 +198,7 @@ if __name__ == '__main__':
         password = args.password
     elif args.password_file:
         file = open(args.password_file)
-        password = file.readline()
+        password = file.readline().strip()
         file.close()
     else:
         password = getpass.getpass('Password: ', stream=sys.stderr)
