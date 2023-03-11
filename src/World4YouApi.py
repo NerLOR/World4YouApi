@@ -12,6 +12,7 @@ KEY_VALUE = re.compile(r'([^=\s<>]+)(="([^"]*)")?')
 HTML_TAG = re.compile(r'<[^>]*>')
 SPACES = re.compile(r'[ \t]+')
 LI_TAG = re.compile(r'<li[^>]*>\s*(.*?)\s*</li>')
+DOMAIN_RE = re.compile(r'^([^ ]*) +(.*?),? +([^ ]*)$')
 
 
 def parse_form(page: str, pre: str = '<form', post: str = '</form>') -> Dict[str, Dict[str, str]]:
@@ -180,7 +181,10 @@ class MyWorld4You:
         if ul_p2 == -1:
             raise RuntimeError()
 
-        ul = [SPACES.sub(' ', HTML_TAG.sub(' ', li)).strip().split(' ') for li in LI_TAG.findall(r.text[ul_p1:ul_p2])]
+        ul = [
+            DOMAIN_RE.fullmatch(SPACES.sub(' ', HTML_TAG.sub(' ', li)).strip()).groups()
+            for li in LI_TAG.findall(r.text[ul_p1:ul_p2])
+        ]
 
         domains = [(li[0], li[1][:-1], int(li[2])) for li in ul]
         for p_domain, p_type, p_id in domains:
