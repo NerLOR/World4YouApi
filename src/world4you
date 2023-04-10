@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-from World4YouApi import MyWorld4You
 import getpass
 import sys
 import argparse
 
+import World4YouApi
+
+
+V: int = 1
+API: World4YouApi.MyWorld4You
+
 
 def info(*cmd_args, **kwargs):
-    if v > 0:
+    if V > 0:
         print(*cmd_args, **kwargs, file=sys.stderr)
         sys.stderr.flush()
 
@@ -21,7 +27,7 @@ def add(record_name: str = None, record_type: str = None, record_value: str = No
     if not record_name or not record_type or not record_value or len(cmd_args) != 0:
         error('usage: world4you add <fqdn> <dns-type> <value>')
         return False
-    return api.add_resource_record(record_type, record_name, record_value)
+    return API.add_resource_record(record_type, record_name, record_value)
 
 
 def update(record_name: str = None, record_type: str = None, record_value_old: str = None, record_value_new: str = None,
@@ -37,11 +43,11 @@ def update(record_name: str = None, record_type: str = None, record_value_old: s
         error('usage: word4you update <fqdn> [<dns-type> [<old-value>]] <new-value>')
         return False
     try:
-        rr = api.get_resource_record(fqdn=record_name, rr_type=record_type, value=record_value_old)
+        rr = API.get_resource_record(fqdn=record_name, rr_type=record_type, value=record_value_old)
     except KeyError:
         error('unable to find resource record')
         return False
-    return api.update_resource_record(rr, new_value=record_value_new)
+    return API.update_resource_record(rr, new_value=record_value_new)
 
 
 def alter(record_name: str = None, record_type_old: str = None, record_value_old: str = None,
@@ -50,11 +56,11 @@ def alter(record_name: str = None, record_type_old: str = None, record_value_old
         error('usage: world4you alter <fqdn> <old-dns-type> <old-value> <new-dns-type> [<new-value>]')
         return False
     try:
-        rr = api.get_resource_record(record_name, record_type_old, record_value_old)
+        rr = API.get_resource_record(record_name, record_type_old, record_value_old)
     except KeyError:
         error('unable to find resource record')
         return False
-    return api.update_resource_record(rr, new_type=record_type_new, new_value=record_value_new)
+    return API.update_resource_record(rr, new_type=record_type_new, new_value=record_value_new)
 
 
 def delete(record_name: str = None, record_type: str = None, record_value: str = None, *cmd_args):
@@ -62,11 +68,11 @@ def delete(record_name: str = None, record_type: str = None, record_value: str =
         error('usage: world4you delete <fqdn> [<dns-type> [<value>]]')
         return False
     try:
-        rr = api.get_resource_record(record_name, record_type, record_value)
+        rr = API.get_resource_record(record_name, record_type, record_value)
     except KeyError:
         error('unable to find resource record')
         return False
-    return api.delete_resource_record(rr)
+    return API.delete_resource_record(rr)
 
 
 def table(*cmd_args):
@@ -75,7 +81,7 @@ def table(*cmd_args):
         return False
 
     len_fqdn, len_value = 0, 0
-    for p in api.packages:
+    for p in API.packages:
         for rr in p.resource_records:
             if len(rr.fqdn) > len_fqdn:
                 len_fqdn = len(rr.fqdn)
@@ -91,7 +97,7 @@ def table(*cmd_args):
     print(f'┣━{"":━<{len_fqdn}s}━┿━{"":━<8s}━┿━{"":━<{len_val_col}s}━┫')
 
     first = True
-    for p in api.packages:
+    for p in API.packages:
         for rr in p.resource_records:
             if not first:
                 print(f'┠─{"":─<{len_fqdn}s}─┼─{"":─<8s}─┼─{"":─<{len_val_col}s}─┨')
@@ -110,7 +116,7 @@ def csv(*cmd_args):
     if len(cmd_args) != 0:
         error('usage: world4you csv')
         return False
-    for p in api.packages:
+    for p in API.packages:
         for rr in p.resource_records:
             print(f'{rr.fqdn:s},{rr.type:s},\"{rr.value:s}\"')
     return True
@@ -140,7 +146,7 @@ def interactive():
                     error("usage: world4you reload")
                 else:
                     info('Retrieving DNS entries...', end='')
-                    api.load_packages()
+                    API.load_packages()
                     info('\rSuccessfully retrieved DNS entries')
             elif cmd == 'exit' or cmd == 'quit':
                 if len(cmd_args) != 0:
@@ -170,7 +176,9 @@ def interactive():
             error(str(e))
 
 
-if __name__ == '__main__':
+def main() -> None:
+    global V, API
+
     parser = argparse.ArgumentParser(prog='world4you', description='An API for World4You DNS Services')
     parser.add_argument('-i', '--interactive', action='store_true',
                         help='Activate interactive mode')
@@ -189,9 +197,8 @@ if __name__ == '__main__':
                         help='Args for the specified action')
     args = parser.parse_args()
 
-    v = 1
     if args.quiet:
-        v = 0
+        V = 0
 
     username = args.username
     if args.password:
@@ -203,11 +210,11 @@ if __name__ == '__main__':
     else:
         password = getpass.getpass('Password: ', stream=sys.stderr)
 
-    api = MyWorld4You()
+    API = World4YouApi.MyWorld4You()
 
     try:
         info('Logging in...', end='')
-        if api.login(username, password):
+        if API.login(username, password):
             info('\rSuccessfully logged in')
         else:
             error('Invalid credentials')
@@ -251,3 +258,7 @@ if __name__ == '__main__':
         error(str(e))
         exit(3)
     exit(0)
+
+
+if __name__ == '__main__':
+    main()
