@@ -286,7 +286,7 @@ class MyWorld4You:
         inputs = parse_form(r.text, '<form name="DeleteDnsRecordForm"', '</form>')
 
         r = self.post(f'/{package.id}/dns/record/delete', {
-            'DeleteDnsRecordForm[recordId]': resource_record.id,
+            'DeleteDnsRecordForm[id]': resource_record.id,
             'DeleteDnsRecordForm[uniqueFormIdDP]': inputs['DeleteDnsRecordForm[uniqueFormIdDP]']['value'],
             'DeleteDnsRecordForm[_token]': inputs['DeleteDnsRecordForm[_token]']['value']
         }, allow_redirects=False)
