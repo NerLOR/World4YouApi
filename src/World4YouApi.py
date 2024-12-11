@@ -105,11 +105,12 @@ class ResourceRecord:
 
 
 class Package:
-    def __init__(self, package_id: int, domain: str, package_type: str):
+    def __init__(self, session: MyWorld4You, package_id: int, domain: str, package_type: str):
+        self._session = session
         self._id = package_id
         self._type = package_type
         self._domain = domain
-        self._resource_records = []
+        self._resource_records = None
 
     @property
     def id(self) -> int:
@@ -125,7 +126,40 @@ class Package:
 
     @property
     def resource_records(self) -> list[ResourceRecord]:
+        if self._resource_records is None:
+            self.load_resource_records()
         return self._resource_records.copy()
+
+    def mark_dirty(self):
+        self._resource_records = None
+
+    def load_resource_records(self) -> list[ResourceRecord]:
+        if self not in self._session._packages:
+            raise KeyError(f'Can not load resource records from foreign package')
+
+        r = self._session.get(f'/{self.id}/dns')
+        pos1 = r.text.find('<meta id="currentDns"')
+        pos2 = r.text.find('>', pos1)
+        meta = r.text[pos1:pos2]
+
+        data_records = []
+        for kv in KEY_VALUE.finditer(meta[21:]):
+            key = kv.group(1)
+            value = kv.group(3)
+            if key == 'data-records':
+                data_records = json.loads(value.replace('&quot;', '"'))
+        if self._resource_records is None:
+            self._resource_records = []
+        else:
+            self._resource_records.clear()
+        for rr in data_records:
+            self._resource_records.append(
+                ResourceRecord(rr['type'],
+                               rr['name'],
+                               rr['value'],
+                               rr['prio'] if len(rr['prio']) > 0 else None,
+                               rr['id']))
+        return self._resource_records
 
     def __str__(self) -> str:
         return f'<Package#{self.id}{{{self.domain}/{self.type}/#{len(self.resource_records)}}}>'
@@ -184,35 +218,9 @@ class MyWorld4You:
 
         domains = [(li[0], li[1][:-1], int(li[2])) for li in ul]
         for p_domain, p_type, p_id in domains:
-            package = Package(p_id, p_domain, p_type)
+            package = Package(self, p_id, p_domain, p_type)
             self._packages.append(package)
-            self.load_resource_records(package)
         return self.packages
-
-    def load_resource_records(self, package: Package) -> list[ResourceRecord]:
-        if package not in self._packages:
-            raise KeyError(f'Can not load resource records from foreign package')
-
-        r = self.get(f'/{package.id}/dns')
-        pos1 = r.text.find('<meta id="currentDns"')
-        pos2 = r.text.find('>', pos1)
-        meta = r.text[pos1:pos2]
-
-        data_records = []
-        for kv in KEY_VALUE.finditer(meta[21:]):
-            key = kv.group(1)
-            value = kv.group(3)
-            if key == 'data-records':
-                data_records = json.loads(value.replace('&quot;', '"'))
-        package._resource_records.clear()
-        for rr in data_records:
-            package._resource_records.append(
-                ResourceRecord(rr['type'],
-                               rr['name'],
-                               rr['value'],
-                               rr['prio'] if len(rr['prio']) > 0 else None,
-                               rr['id']))
-        return package._resource_records
 
     def get_package_by_domain(self, domain: str) -> Package:
         for p in self.packages:
@@ -270,7 +278,7 @@ class MyWorld4You:
         }, allow_redirects=False)
 
         if r.status_code == 302:
-            self.load_packages()
+            package.mark_dirty()
             return True
         elif r.status_code == 500:
             raise RuntimeError('Invalid input')
@@ -292,7 +300,7 @@ class MyWorld4You:
         }, allow_redirects=False)
 
         if r.status_code == 302:
-            self.load_packages()
+            package.mark_dirty()
             return True
         elif r.status_code == 500:
             raise RuntimeError('Invalid input')
@@ -317,7 +325,7 @@ class MyWorld4You:
         }, allow_redirects=False)
 
         if r.status_code == 302:
-            self.load_packages()
+            package.mark_dirty()
             return True
         elif r.status_code == 500:
             raise RuntimeError('Invalid input')
@@ -326,13 +334,6 @@ class MyWorld4You:
             raise RuntimeError(msg)
         else:
             raise RuntimeError(f'Unknown error: {r.status_code} {r.reason}')
-
-    def get_cookies(self) -> dict[str, str]:
-        return {'W4YSESSID': self.session_id}
-
-    @property
-    def session_id(self) -> str:
-        return self._session_id
 
     @property
     def customer_id(self) -> str:
