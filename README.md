@@ -1,21 +1,24 @@
 
 # World4YouApi
+
 This is a simple Python API for the DNS provider [World4You](https://www.world4you.com/).
-It can be used to automatically update your dynamic IP Address or to automatically renew 
+It may be used to automatically update your dynamic IP Address or to automatically renew 
 your certificates using [acme.sh](https://github.com/acmesh-official/acme.sh) with the ```--dns``` option.
 And yes, wildcard certificates are possible!
 
 
 ## acme.sh integration
+
 Part of this API is used in [acme.sh](https://github.com/NerLOR/acme.sh).
 
 
 ## world4you
-This Python script can be executed to update and manipulate the resource records 
+
+This Python script may be executed to update and manipulate the resource records 
 from command line.
 
 ```
-world4you [-i] [-q] -u username [{-p pwd | -P file}] [{-f | -F}] [action [arg ...]]
+world4you [-i] [-q] -u USERNAME [-p PWD | -P FILE] [-f | -F] [ACTION [ARG ...]]
 ```
 
 **HINT:** If no password or file is provided, the password is read from `stdin`.

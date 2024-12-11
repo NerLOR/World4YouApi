@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
-from typing import Dict, List
 import requests
 import re
 import json
@@ -17,7 +16,7 @@ LI_TAG = re.compile(r'<li[^>]*>\s*(.*?)\s*</li>')
 DOMAIN_RE = re.compile(r'^([^ ]*) +(.*?),? +([^ ]*)$')
 
 
-def parse_form(page: str, pre: str = '<form', post: str = '</form>') -> Dict[str, Dict[str, str]]:
+def parse_form(page: str, pre: str = '<form', post: str = '</form>') -> dict[str, dict[str, str]]:
     pos1 = page.find(pre)
     pos2 = page.find(post, pos1)
     form = page[pos1:pos2]
@@ -126,7 +125,7 @@ class Package:
         return self._domain
 
     @property
-    def resource_records(self) -> List[ResourceRecord]:
+    def resource_records(self) -> list[ResourceRecord]:
         return self._resource_records.copy()
 
     def __str__(self) -> str:
@@ -171,7 +170,7 @@ class MyWorld4You:
                 print(f'{r.status_code} {r.reason}', file=sys.stderr)
             return False
 
-    def load_packages(self) -> List[Package]:
+    def load_packages(self) -> list[Package]:
         self._packages.clear()
         r = self.get('/')
 
@@ -195,7 +194,7 @@ class MyWorld4You:
             self.load_resource_records(package)
         return self.packages
 
-    def load_resource_records(self, package: Package) -> List[ResourceRecord]:
+    def load_resource_records(self, package: Package) -> list[ResourceRecord]:
         if package not in self._packages:
             raise KeyError(f'Can not load resource records from foreign package')
 
@@ -233,16 +232,22 @@ class MyWorld4You:
 
     def get_resource_record(self, fqdn: str, rr_type: str = None, value: str = None,
                             prio: int = None) -> ResourceRecord:
-        matches = self.get_resource_records(fqdn, rr_type, value, prio)
-        if len(matches) == 0:
-            raise KeyError('No resource record can be found')
-        elif len(matches) > 1:
-            raise KeyError('Multiple resource records were found')
-        else:
-            return matches[0]
+        return self.get_resource_record(fqdn, rr_type, value, prio)
 
-    def get_resource_records(self, fqdn: str, rr_type: str = None, value: str = None,
-                             prio: int = None) -> List[ResourceRecord]:
+    def get_resource_records(self, fqdn: str, rr_type: str = None, value: str = None, prio: int = None,
+                             force_one: bool = False, force_all: bool = True) -> list[ResourceRecord]:
+        matches = self.find_resource_records(fqdn, rr_type, value, prio)
+        if len(matches) == 0:
+            raise KeyError('No resource record may be found')
+        elif len(matches) > 1:
+            if force_one:
+                return matches[:1]
+            elif not force_all:
+                raise KeyError('Multiple resource records were found')
+        return matches
+
+    def find_resource_records(self, fqdn: str, rr_type: str = None, value: str = None,
+                              prio: int = None) -> list[ResourceRecord]:
         matches = []
         for p in self.packages:
             for rr in p.resource_records:
@@ -327,7 +332,7 @@ class MyWorld4You:
         else:
             raise RuntimeError(f'Unknown error: {r.status_code} {r.reason}')
 
-    def get_cookies(self) -> Dict[str, str]:
+    def get_cookies(self) -> dict[str, str]:
         return {'W4YSESSID': self.session_id}
 
     @property
@@ -339,5 +344,5 @@ class MyWorld4You:
         return self._customer_id
 
     @property
-    def packages(self) -> List[Package]:
+    def packages(self) -> list[Package]:
         return self._packages.copy()
