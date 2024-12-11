@@ -34,8 +34,8 @@ world4you [-i] [-q] -u USERNAME [-p PWD | -P FILE] [-f | -F] [ACTION [ARG ...]]
 * `-F`, `--force-all` If the provided *FQDN-Type-Value* combination is **not unique**, perform the specified action on **all** matching resource records
 * `action` The action to be performed. Possible values:
     * `add <fqdn> <dns-type> <value>`
-    * `update {<id> | <fqdn> [<dns-type> [<old-value>]]} <new-value>`
-    * `alter {<id> | <fqdn> [<old-dns-type> [<old-value>]]} <new-dns-type> [<new-value>]`
-    * `delete {<id> | <fqdn> [<dns-type> [<value>]]}`
-    * `table [full]`
-    * `csv`
+    * `update <fqdn> [<dns-type> [<old-value>]] <new-value>`
+    * `alter <fqdn> <old-dns-type> <old-value> <new-dns-type> [<new-value>]`
+    * `delete <fqdn> [<dns-type> [<value>]]`
+    * `table [full] [<domain> ...]`
+    * `csv [<domain> ...]`

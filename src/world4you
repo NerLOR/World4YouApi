@@ -84,12 +84,11 @@ def delete(record_name: str = None, record_type: str = None, record_value: str =
 
 
 def table(*cmd_args):
-    if not (len(cmd_args) == 0 or (len(cmd_args) == 1 and cmd_args[0] == 'full')):
-        error('usage: world4you table [full]')
-        return False
-
+    do_filter = len(cmd_args) > 1 or (len(cmd_args) == 1 and cmd_args[0] != 'full')
     len_fqdn, len_value = 0, 0
     for p in API.packages:
+        if do_filter and p.domain not in cmd_args:
+            continue
         for rr in p.resource_records:
             if len(rr.fqdn) > len_fqdn:
                 len_fqdn = len(rr.fqdn)
@@ -106,6 +105,8 @@ def table(*cmd_args):
 
     first = True
     for p in API.packages:
+        if do_filter and p.domain not in cmd_args:
+            continue
         for rr in p.resource_records:
             if not first:
                 print(f'┠─{"":─<{len_fqdn}s}─┼─{"":─<8s}─┼─{"":─<{len_val_col}s}─┨')
@@ -121,10 +122,10 @@ def table(*cmd_args):
 
 
 def csv(*cmd_args):
-    if len(cmd_args) != 0:
-        error('usage: world4you csv')
-        return False
+    do_filter = len(cmd_args) > 0
     for p in API.packages:
+        if do_filter and p.domain not in cmd_args:
+            continue
         for rr in p.resource_records:
             print(f'{rr.fqdn:s},{rr.type:s},\"{rr.value:s}\"')
     return True
@@ -133,9 +134,19 @@ def csv(*cmd_args):
 def interactive():
     while True:
         print('> ', file=sys.stderr, end='')
-        line = input()
-        cmd_args = line.split(' ')
-        cmd = cmd_args.pop(0)
+        try:
+            line = input()
+            cmd_args = line.strip().split(' ')
+            cmd = cmd_args.pop(0)
+        except EOFError:
+            error("\nGoodbye!")
+            exit(0)
+        except KeyboardInterrupt:
+            error("\nGoodbye!")
+            exit(0)
+        except InterruptedError:
+            error("\nGoodbye!")
+            exit(0)
         try:
             if cmd == 'add':
                 add(*cmd_args)
@@ -167,7 +178,8 @@ def interactive():
                 else:
                     error("Commands: ")
                     error("  help")
-                    error("  list / table [full]")
+                    error("  list / table [full] [<domain> ...]")
+                    error("  csv [<domain> ...]")
                     error("  reload")
                     error("  exit / quit")
                     error("  add <fqdn> <dns-type> <value>")
