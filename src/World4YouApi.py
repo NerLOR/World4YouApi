@@ -5,7 +5,6 @@ from __future__ import annotations
 import requests
 import re
 import json
-import sys
 
 
 API_URL = 'https://my.world4you.com/en'
@@ -164,11 +163,7 @@ class MyWorld4You:
             self.load_packages()
             return True
         else:
-            if res['message'] is not None:
-                print(f'{r.status_code} {r.reason}: {res["message"]}', file=sys.stderr)
-            else:
-                print(f'{r.status_code} {r.reason}', file=sys.stderr)
-            return False
+            raise PermissionError(f'{r.status_code} {r.reason}' + (f': {res["message"]}' if res['message'] is not None else ''))
 
     def load_packages(self) -> list[Package]:
         self._packages.clear()

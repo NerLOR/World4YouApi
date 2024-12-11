@@ -234,12 +234,11 @@ def main() -> None:
 
     try:
         info('Logging in...', end='')
-        if API.login(username, password):
-            info('\rSuccessfully logged in')
-        else:
-            error('Invalid credentials')
-            exit(5)
-        info('')
+        API.login(username, password)
+        info('\rSuccessfully logged in!')
+    except PermissionError as e:
+        error(f'\r{e}')
+        exit(5)
     except ConnectionError as e:
         error(f'\r{e}')
         exit(5)
