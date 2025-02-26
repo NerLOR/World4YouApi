@@ -11,8 +11,6 @@ API_URL = 'https://my.world4you.com/en'
 KEY_VALUE = re.compile(r'([^=\s<>]+)(="([^"]*)")?')
 HTML_TAG = re.compile(r'<[^>]*>')
 SPACES = re.compile(r'[ \t]+')
-LI_TAG = re.compile(r'<li[^>]*>\s*(.*?)\s*</li>')
-DOMAIN_RE = re.compile(r'^([^ ]*) +(.*?),? +([^ ]*)$')
 
 
 def parse_form(page: str, pre: str = '<form', post: str = '</form>') -> dict[str, dict[str, str]]:
@@ -203,22 +201,19 @@ class MyWorld4You:
         self._packages.clear()
         r = self.get('/')
 
-        ul_p1 = r.text.find('<ul class="nav header-paket-list"')
-        if ul_p1 == -1:
+        script_p1 = r.text.find('id="paketListData"')
+        if script_p1 == -1:
+            raise RuntimeError()
+        script_p1 = r.text.find('>', script_p1)
+        if script_p1 == -1:
+            raise RuntimeError()
+        script_p2 = r.text.find('</script>', script_p1)
+        if script_p2 == -1:
             raise RuntimeError()
 
-        ul_p2 = r.text.find('</ul>', ul_p1)
-        if ul_p2 == -1:
-            raise RuntimeError()
-
-        ul = [
-            DOMAIN_RE.fullmatch(SPACES.sub(' ', HTML_TAG.sub(' ', li)).strip()).groups()
-            for li in LI_TAG.findall(r.text[ul_p1:ul_p2])
-        ]
-
-        domains = [(li[0], li[1][:-1], int(li[2])) for li in ul]
-        for p_domain, p_type, p_id in domains:
-            package = Package(self, p_id, p_domain, p_type)
+        items = json.loads(r.text[script_p1 + 1:script_p2])['items']
+        for item in items:
+            package = Package(self, item['id'], item['fqdn'], item['description'])
             self._packages.append(package)
         return self.packages
 
