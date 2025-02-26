@@ -230,7 +230,7 @@ class MyWorld4You:
 
     def get_resource_record(self, fqdn: str, rr_type: str = None, value: str = None,
                             prio: int = None) -> ResourceRecord:
-        return self.get_resource_record(fqdn, rr_type, value, prio)
+        return self.get_resource_records(fqdn, rr_type, value, prio, force_one=True, force_all=False)[0]
 
     def get_resource_records(self, fqdn: str, rr_type: str = None, value: str = None, prio: int = None,
                              force_one: bool = False, force_all: bool = True) -> list[ResourceRecord]:
